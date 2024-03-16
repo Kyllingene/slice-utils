@@ -20,6 +20,15 @@ fn fuse() {
 }
 
 #[test]
+fn split() {
+    let a = [1, 2, 3].chain([4, 5, 6]);
+    let (b, c) = a.split(3).expect("Failed to split at 3");
+
+    assert_eq!(b[2], 3);
+    assert_eq!(c[2], 6);
+}
+
+#[test]
 fn mutability() {
     let mut a = [1, 2, 3];
     let mut b = [4, 5, 6];
