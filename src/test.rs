@@ -85,23 +85,36 @@ fn interleave() {
 }
 
 #[test]
+fn chunks() {
+    let slice = [1, 2, 3, 4, 5];
+
+    let mut len = 0;
+    slice.chunks(2).enumerate().for_each(|(mut i, c)| {
+        i *= 2;
+        assert_eq!(c, &slice[i..5.min(i + 2)]);
+        len += 1;
+    });
+    assert_eq!(len, 3);
+
+    assert!(slice.chunks_exact(2).is_none());
+}
+
+#[test]
 fn windows() {
     let a = [1, 2, 3, 4, 5];
 
     let mut len = 0;
-    a.windows(3).enumerate().for_each(|(i, w)| {
-        assert_eq!(w, &a[i..i + 3]);
+    a.windows(3).for_each(|w| {
+        assert_eq!(w, &a[len..len + 3]);
         len += 1;
     });
-
     assert_eq!(len, 3);
 
     len = 0;
-    a.windows(4).enumerate().for_each(|(i, w)| {
-        assert_eq!(w, &a[i..i + 4]);
+    a.windows(4).for_each(|w| {
+        assert_eq!(w, &a[len..len + 4]);
         len += 1;
     });
-
     assert_eq!(len, 2);
 }
 

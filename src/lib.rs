@@ -19,6 +19,7 @@
 //! making these possible through statically known lengths.
 
 mod chain;
+mod chunks;
 mod cycle;
 mod debug;
 mod eq;
@@ -36,6 +37,7 @@ mod test;
 use core::ops::RangeBounds;
 
 pub use chain::Chain;
+pub use chunks::Chunks;
 pub use cycle::Cycle;
 pub use interleave::Interleave;
 pub use reverse::Reverse;
@@ -139,6 +141,38 @@ pub trait Slice<T>: Sized {
     /// ```
     fn chain<O: Slice<T>>(self, other: O) -> Chain<T, Self, O> {
         Chain::new(self, other)
+    }
+
+    /// Returns an iterator over fixed-size chunks: the equivalent of
+    /// [`slice::chunks`]. The last chunk may be smaller than the rest.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut chunks = slice.chunks(2);
+    /// assert_eq!(chunks.next().unwrap(), [1, 2]);
+    /// assert_eq!(chunks.next().unwrap(), [3, 4]);
+    /// assert_eq!(chunks.next().unwrap(), [5]);
+    /// assert!(chunks.next().is_none());
+    /// ```
+    fn chunks(&self, size: usize) -> Chunks<T, Self> {
+        Chunks::new(self, size)
+    }
+
+    /// Returns an iterator over fixed-size chunks. If `data.len()` is not
+    /// divisible by `size`, returns None. Otherwise, equivalent to [`chunks`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// assert!(slice.chunks_exact(2).is_none());
+    /// ```
+    fn chunks_exact(&self, size: usize) -> Option<Chunks<T, Self>> {
+        Chunks::new_exact(self, size)
     }
 
     /// Repeats the slice forever: the equivalent of [`Iterator::cycle`].

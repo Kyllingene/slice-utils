@@ -15,7 +15,7 @@ continuity. This results in an `Iterator`-like API. Here are some differences:
     - This may be fixable through a thorough refactor
 - `Slice`s are not lazy, and as such:
     - `Slice`s cannot perform arbitrary computation, because that would require
-    allocation
+    either allocation or ownership semantics
     - This may be alleviated by a const generic API in the future
 
 # License
