@@ -37,12 +37,12 @@ mod test;
 use core::ops::RangeBounds;
 
 pub use chain::Chain;
-pub use chunks::Chunks;
+pub use chunks::{ArrayChunks, Chunks};
 pub use cycle::Cycle;
 pub use interleave::Interleave;
 pub use reverse::Reverse;
 pub use slicing::{SliceOf, SliceOfMut};
-pub use windows::Windows;
+pub use windows::{ArrayWindows, Windows};
 
 /// A split, returned by [`Slice::split`].
 pub type SplitOf<T, A> = (SliceOf<T, A>, SliceOf<T, A>);
@@ -127,6 +127,59 @@ pub trait Slice<T>: Sized {
         SliceOf::new(self, ..=n)
     }
 
+    /// Returns an iterator over const-size chunks: the equivalent of
+    /// [`slice::array_chunks`]. All the chunks are guaranteed to be the same
+    /// size: items at the end will be skipped if there aren't enough to fill a
+    /// chunk.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut chunks = slice.array_chunks::<2>();
+    /// assert_eq!(chunks.next().unwrap(), [&1, &2]);
+    /// assert_eq!(chunks.next().unwrap(), [&3, &4]);
+    /// assert!(chunks.next().is_none());
+    /// ```
+    fn array_chunks<const N: usize>(&self) -> ArrayChunks<T, Self, N> {
+        ArrayChunks::new(self)
+    }
+
+    /// Returns an iterator over fixed-size chunks. If `data.len()` is not
+    /// divisible by `size`, returns None. Otherwise, equivalent to
+    /// [`array_chunks`](Slice::array_chunks).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// assert!(slice.array_chunks_exact::<2>().is_none());
+    /// ```
+    fn array_chunks_exact<const N: usize>(&self) -> Option<ArrayChunks<T, Self, N>> {
+        ArrayChunks::new_exact(self)
+    }
+
+    /// Returns an iterator over overlapping slices of length `size`:
+    /// the equivalent of [`slice::array_windows`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut w = slice.array_windows::<3>();
+    ///
+    /// assert_eq!(w.next().unwrap(), [&1, &2, &3]);
+    /// assert_eq!(w.next().unwrap(), [&2, &3, &4]);
+    /// assert_eq!(w.next().unwrap(), [&3, &4, &5]);
+    /// assert!(w.next().is_none());
+    /// ```
+    fn array_windows<const N: usize>(&self) -> ArrayWindows<T, Self, N> {
+        ArrayWindows::new(self)
+    }
+
     /// Chains two slices together, back-to-back: the equivalent of
     /// [`Iterator::chain`].
     ///
@@ -162,7 +215,8 @@ pub trait Slice<T>: Sized {
     }
 
     /// Returns an iterator over fixed-size chunks. If `data.len()` is not
-    /// divisible by `size`, returns None. Otherwise, equivalent to [`chunks`].
+    /// divisible by `size`, returns None. Otherwise, equivalent to
+    /// [`chunks`](Slice::array_chunks).
     ///
     /// # Examples
     ///

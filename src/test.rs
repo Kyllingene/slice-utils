@@ -100,6 +100,7 @@ fn chunks() {
 }
 
 #[test]
+#[should_panic = "cannot call windows with size 0"]
 fn windows() {
     let a = [1, 2, 3, 4, 5];
 
@@ -116,6 +117,8 @@ fn windows() {
         len += 1;
     });
     assert_eq!(len, 2);
+
+    a.windows(0);
 }
 
 #[test]

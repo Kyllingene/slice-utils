@@ -1,6 +1,6 @@
 [package]
 name = "slice-utils"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 
 license = "MIT"
@@ -11,7 +11,3 @@ repository = "https://github.com/Kyllingene/slice-utils"
 [features]
 default = []
 std = []
-
-[badges]
-github = { repository = "Kyllingene/slice-utils" }
-maintenance = { status = "experimental" }
