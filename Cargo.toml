@@ -11,3 +11,7 @@ repository = "https://github.com/Kyllingene/slice-utils"
 [features]
 default = []
 std = []
+
+[badges]
+github = { repository = "Kyllingene/slice-utils" }
+maintenance = { status = "experimental" }
