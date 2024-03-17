@@ -2,7 +2,8 @@ use core::marker::PhantomData;
 
 use crate::{Slice, SliceMut};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// Two slices joined via [`Slice::chain`].
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Chain<T, A, B>(pub A, pub B, PhantomData<fn() -> T>);
 
 impl<T, A, B> Chain<T, A, B>

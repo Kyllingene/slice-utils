@@ -1,8 +1,9 @@
 use core::marker::PhantomData;
 
-use crate::Slice;
-use crate::{Chain, Repeat};
+use crate::{Chain, Cycle, Reverse, SliceOf, SliceOfMut};
+use crate::{Slice, SliceMut};
 
+/// An iterator over a [`Slice`].
 #[derive(Debug, Clone, Copy, Hash)]
 pub struct Iter<'a, T, A> {
     start: usize,
@@ -77,7 +78,7 @@ where
     }
 }
 
-impl<T, A> Repeat<T, A>
+impl<T, A> Cycle<T, A>
 where
     A: Slice<T>,
 {
@@ -86,13 +87,79 @@ where
     }
 }
 
-impl<'a, T, A> IntoIterator for &'a Repeat<T, A>
+impl<'a, T, A> IntoIterator for &'a Cycle<T, A>
 where
     A: Slice<T>,
 {
     type Item = &'a T;
 
-    type IntoIter = Iter<'a, T, Repeat<T, A>>;
+    type IntoIter = Iter<'a, T, Cycle<T, A>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T, A> Reverse<T, A>
+where
+    A: Slice<T>,
+{
+    pub fn iter(&self) -> Iter<T, Self> {
+        Iter::new(self)
+    }
+}
+
+impl<'a, T, A> IntoIterator for &'a Reverse<T, A>
+where
+    A: Slice<T>,
+{
+    type Item = &'a T;
+
+    type IntoIter = Iter<'a, T, Reverse<T, A>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T, A> SliceOf<T, A>
+where
+    A: Slice<T>,
+{
+    pub fn iter(&self) -> Iter<T, Self> {
+        Iter::new(self)
+    }
+}
+
+impl<'a, T, A> IntoIterator for &'a SliceOf<T, A>
+where
+    A: Slice<T>,
+{
+    type Item = &'a T;
+
+    type IntoIter = Iter<'a, T, SliceOf<T, A>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<T, A> SliceOfMut<T, A>
+where
+    A: SliceMut<T>,
+{
+    pub fn iter(&self) -> Iter<T, Self> {
+        Iter::new(self)
+    }
+}
+
+impl<'a, T, A> IntoIterator for &'a SliceOfMut<T, A>
+where
+    A: SliceMut<T>,
+{
+    type Item = &'a T;
+
+    type IntoIter = Iter<'a, T, SliceOfMut<T, A>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

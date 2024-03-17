@@ -2,7 +2,11 @@ use core::marker::PhantomData;
 
 use crate::{Slice, SliceMut};
 
-impl<T, A> Repeat<T, A>
+/// An infinitely looped slice, from [`Slice::cycle`].
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Cycle<T, A>(pub A, PhantomData<fn() -> T>);
+
+impl<T, A> Cycle<T, A>
 where
     A: Slice<T>,
 {
@@ -11,10 +15,7 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Repeat<T, A>(pub A, PhantomData<fn() -> T>);
-
-impl<T, A> Slice<T> for Repeat<T, A>
+impl<T, A> Slice<T> for Cycle<T, A>
 where
     A: Slice<T>,
 {
@@ -27,7 +28,7 @@ where
     }
 }
 
-impl<T, A> SliceMut<T> for Repeat<T, A>
+impl<T, A> SliceMut<T> for Cycle<T, A>
 where
     A: SliceMut<T>,
 {
