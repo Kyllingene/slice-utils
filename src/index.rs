@@ -1,53 +1,52 @@
 use core::ops::{Index, IndexMut};
 
-use crate::{Chain, Cycle, Interleave, Reverse, Slice, SliceMut, SliceOf, SliceOfMut};
+use crate::{Chain, Cycle, Interleave, Reverse, Slice, SliceOf};
 
-macro_rules! impl_index {
+macro_rules! impl_debug {
     ($(
-        $(mut $($is_mut:lifetime)?)? $typ:ident [$($lifetimes:lifetime),* $($generics:ident),*] = $bound:ident
+        $typ:ident [$a:ident $(, $b:ident)?]
     ;)*) =>{$(
         impl<
-            $($lifetimes,)* T, $($generics,)*
-        > Index<usize> for $typ<$($lifetimes,)* T, $($generics,)*>
+            'a, T, $a, $($b,)?
+        > Index<usize> for $typ<&'a T, $a $(, $b)?>
         where
-            $($generics : $bound<T>,)*
+            $a: for<'b> Slice<'b, &'b T>,
+            $($b: for<'b> Slice<'b, &'b T, Mut = <$a as Slice<'b, &'b T>>::Mut>,)?
         {
             type Output = T;
 
-            fn index(&self, index: usize) -> &Self::Output {
-                self.get(index).unwrap_or_else(|| {
-                    panic!(
-                        "index out of bounds: index was {index} but the length was {}",
-                        self.len()
-                    )
-                })
+            fn index(&self, index: usize) -> &T {
+                self.get(index)
+                    .unwrap_or_else(|| panic!(
+                        "index out of bounds: len is {} but index is {index}",
+                        self.len(),
+                    ))
             }
         }
 
-        impl<
-            $($lifetimes,)* T, $($generics,)*
-        > IndexMut<usize> for $typ<$($lifetimes,)* T, $($generics,)*>
-        where
-            $typ<T, $($generics,)*>: SliceMut<T>,
-            $($generics : SliceMut<T>,)*
-        {
-            fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-                let len = self.len();
-                self.get_mut(index).unwrap_or_else(|| {
-                    panic!(
-                        "index out of bounds: the len is {len} but the index was {index}",
-                    )
-                })
-            }
-        }
+        // FIXME: make this work
+        // impl<
+        //     'a, T, $a, $($b,)?
+        // > IndexMut<usize> for $typ<&'a T, $a $(, $b)?>
+        // where
+        //     $a: for<'b> Slice<'b, &'b T, Mut = &'b mut T>,
+        //     $($b: for<'b> Slice<'b, &'b T, Mut = &'b mut T>,)?
+        // {
+        //     fn index_mut(&mut self, index: usize) -> &mut T {
+        //         let len = self.len();
+        //         self.get_mut(index)
+        //             .unwrap_or_else(|| panic!(
+        //                 "index out of bounds: len is {len} but index is {index}"
+        //             ))
+        //     }
+        // }
     )*};
 }
 
-impl_index! {
-    Chain[A, B] = Slice;
-    Cycle[A] = Slice;
-    Interleave[A, B] = Slice;
-    Reverse[A] = Slice;
-    SliceOf[A] = Slice;
-    SliceOfMut[A] = SliceMut;
+impl_debug! {
+    Chain[A, B];
+    Cycle[A];
+    Interleave[A, B];
+    Reverse[A];
+    SliceOf[A];
 }

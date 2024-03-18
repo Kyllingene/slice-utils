@@ -11,3 +11,6 @@ repository = "https://github.com/Kyllingene/slice-utils"
 [features]
 default = []
 std = []
+
+[dependencies]
+paste = "1.0.14"

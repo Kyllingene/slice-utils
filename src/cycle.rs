@@ -1,38 +1,36 @@
 use core::marker::PhantomData;
 
-use crate::{Slice, SliceMut};
+use crate::Slice;
 
 /// An infinitely looped slice, from [`Slice::cycle`].
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Hash)]
 pub struct Cycle<T, A>(pub A, PhantomData<fn() -> T>);
 
-impl<T, A> Cycle<T, A>
+impl<'a, T, A> Cycle<T, A>
 where
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
+    /// See [`Slice::cycle`].
     pub fn new(data: A) -> Self {
         Self(data, PhantomData)
     }
 }
 
-impl<T, A> Slice<T> for Cycle<T, A>
+impl<'a, T, A> Slice<'a, T> for Cycle<T, A>
 where
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
-    fn get(&self, index: usize) -> Option<&T> {
+    type Mut = A::Mut;
+
+    fn get(&'a self, index: usize) -> Option<T> {
         self.0.get(index % self.0.len())
+    }
+
+    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
+        self.0.get_mut(index % self.0.len())
     }
 
     fn len(&self) -> usize {
         usize::MAX
-    }
-}
-
-impl<T, A> SliceMut<T> for Cycle<T, A>
-where
-    A: SliceMut<T>,
-{
-    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        self.0.get_mut(index % self.0.len())
     }
 }

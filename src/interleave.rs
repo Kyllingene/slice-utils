@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use crate::{Slice, SliceMut};
+use crate::Slice;
 
 /// Two interleaved slices, from [`Slice::interleave`].
 pub struct Interleave<T, A, B> {
@@ -9,11 +9,12 @@ pub struct Interleave<T, A, B> {
     _marker: PhantomData<fn() -> T>,
 }
 
-impl<T, A, B> Interleave<T, A, B>
+impl<'a, T, A, B> Interleave<T, A, B>
 where
-    A: Slice<T>,
-    B: Slice<T>,
+    A: Slice<'a, T>,
+    B: Slice<'a, T>,
 {
+    /// See [`Slice::interleave`].
     pub fn new(left: A, right: B) -> Self {
         Self {
             left,
@@ -23,12 +24,14 @@ where
     }
 }
 
-impl<T, A, B> Slice<T> for Interleave<T, A, B>
+impl<'a, T, M, A, B> Slice<'a, T> for Interleave<T, A, B>
 where
-    A: Slice<T>,
-    B: Slice<T>,
+    A: Slice<'a, T, Mut = M>,
+    B: Slice<'a, T, Mut = M>,
 {
-    fn get(&self, index: usize) -> Option<&T> {
+    type Mut = A::Mut;
+
+    fn get(&'a self, index: usize) -> Option<T> {
         if index % 2 == 0 {
             self.left.get(index / 2)
         } else {
@@ -36,21 +39,15 @@ where
         }
     }
 
-    fn len(&self) -> usize {
-        self.left.len() + self.right.len()
-    }
-}
-
-impl<T, A, B> SliceMut<T> for Interleave<T, A, B>
-where
-    A: SliceMut<T>,
-    B: SliceMut<T>,
-{
-    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
         if index % 2 == 0 {
             self.left.get_mut(index / 2)
         } else {
-            self.right.get_mut(index / 2 + 1)
+            self.right.get_mut(index / 2)
         }
+    }
+
+    fn len(&self) -> usize {
+        self.left.len() + self.right.len()
     }
 }

@@ -15,8 +15,9 @@ pub struct Chunks<'a, T, A> {
 impl<'a, T, A> Chunks<'a, T, A>
 where
     T: 'a,
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
+    /// See [`Slice::chunks`].
     pub fn new(data: &'a A, size: usize) -> Self {
         Self {
             data,
@@ -26,6 +27,7 @@ where
         }
     }
 
+    /// See [`Slice::chunks_exact`].
     pub fn new_exact(data: &'a A, size: usize) -> Option<Self> {
         if data.len() % size != 0 {
             None
@@ -39,6 +41,7 @@ where
         }
     }
 
+    /// Retrieve the inner slice.
     pub fn inner(&self) -> &'a A {
         self.data
     }
@@ -47,7 +50,7 @@ where
 impl<'a, T, A> Iterator for Chunks<'a, T, A>
 where
     T: 'a,
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
     type Item = SliceOf<T, &'a A>;
 
@@ -75,8 +78,9 @@ pub struct ArrayChunks<'a, T, A, const N: usize> {
 impl<'a, T, A, const N: usize> ArrayChunks<'a, T, A, N>
 where
     T: 'a,
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
+    /// See [`Slice::array_chunks`].
     pub fn new(data: &'a A) -> Self {
         Self {
             data,
@@ -85,6 +89,7 @@ where
         }
     }
 
+    /// See [`Slice::array_chunks_exact`].
     pub fn new_exact(data: &'a A) -> Option<Self> {
         if data.len() % N != 0 {
             None
@@ -97,6 +102,7 @@ where
         }
     }
 
+    /// Retrieve the inner slice.
     pub fn inner(&self) -> &'a A {
         self.data
     }
@@ -105,9 +111,9 @@ where
 impl<'a, T, A, const N: usize> Iterator for ArrayChunks<'a, T, A, N>
 where
     T: 'a,
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
-    type Item = [&'a T; N];
+    type Item = [T; N];
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.i + N < self.data.len() {

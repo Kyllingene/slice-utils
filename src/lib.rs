@@ -1,5 +1,6 @@
 #![cfg_attr(not(any(test, feature = "std")), no_std)]
 #![doc = include_str!("../README.md")]
+#![warn(missing_docs)]
 
 mod chain;
 mod chunks;
@@ -10,6 +11,7 @@ mod impls;
 mod index;
 mod interleave;
 mod iter;
+mod map;
 mod reverse;
 mod slicing;
 mod windows;
@@ -23,15 +25,18 @@ pub use chain::Chain;
 pub use chunks::{ArrayChunks, Chunks};
 pub use cycle::Cycle;
 pub use interleave::Interleave;
+pub use map::{Map, MapMut};
 pub use reverse::Reverse;
-pub use slicing::{SliceOf, SliceOfMut};
+pub use slicing::SliceOf;
 pub use windows::{ArrayWindows, Windows};
 
 /// A split, returned by [`Slice::split`].
 pub type SplitOf<T, A> = (SliceOf<T, A>, SliceOf<T, A>);
 
 /// An extension trait providing iterator-like utilities for slices.
-pub trait Slice<T>: Sized {
+pub trait Slice<'a, T>: Sized {
+    type Mut;
+
     /// Index the slice.
     ///
     /// If `index < self.len()`, this must succeed.
@@ -43,7 +48,12 @@ pub trait Slice<T>: Sized {
     /// let slice = [1, 2, 3];
     /// assert_eq!(slice.get(2), Some(&3));
     /// ```
-    fn get(&self, index: usize) -> Option<&T>;
+    fn get(&'a self, index: usize) -> Option<T>;
+
+    #[allow(unused_variables)]
+    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
+        None
+    }
 
     /// Returns the exact length of the slice.
     ///
@@ -87,6 +97,25 @@ pub trait Slice<T>: Sized {
         SliceOf::new(self, range)
     }
 
+    /// Returns `(&self[..at], &self[at..])`.
+    /// Returns `None` if `at` is out-of-bounds.
+    ///
+    /// Equivalent of [`slice::split`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5, 6];
+    /// let (a, b) = slice.split(3).unwrap();
+    ///
+    /// assert_eq!(a, [1, 2, 3]);
+    /// assert_eq!(b, [4, 5, 6]);
+    /// ```
+    fn split(&'a self, at: usize) -> Option<SplitOf<T, &Self>> {
+        Some((SliceOf::new(self, ..at)?, SliceOf::new(self, at..)?))
+    }
+
     /// Shortcut for [`.slice(n + 1..)`](Slice::slice)
     ///
     /// # Examples
@@ -126,7 +155,7 @@ pub trait Slice<T>: Sized {
     /// assert_eq!(chunks.next().unwrap(), [&3, &4]);
     /// assert!(chunks.next().is_none());
     /// ```
-    fn array_chunks<const N: usize>(&self) -> ArrayChunks<T, Self, N> {
+    fn array_chunks<const N: usize>(&'a self) -> ArrayChunks<T, Self, N> {
         ArrayChunks::new(self)
     }
 
@@ -141,7 +170,7 @@ pub trait Slice<T>: Sized {
     /// let slice = [1, 2, 3, 4, 5];
     /// assert!(slice.array_chunks_exact::<2>().is_none());
     /// ```
-    fn array_chunks_exact<const N: usize>(&self) -> Option<ArrayChunks<T, Self, N>> {
+    fn array_chunks_exact<const N: usize>(&'a self) -> Option<ArrayChunks<T, Self, N>> {
         ArrayChunks::new_exact(self)
     }
 
@@ -160,7 +189,7 @@ pub trait Slice<T>: Sized {
     /// assert_eq!(w.next().unwrap(), [&3, &4, &5]);
     /// assert!(w.next().is_none());
     /// ```
-    fn array_windows<const N: usize>(&self) -> ArrayWindows<T, Self, N> {
+    fn array_windows<const N: usize>(&'a self) -> ArrayWindows<T, Self, N> {
         ArrayWindows::new(self)
     }
 
@@ -176,7 +205,7 @@ pub trait Slice<T>: Sized {
     ///
     /// assert_eq!(a.chain(b), [1, 2, 3, 4, 5, 6]);
     /// ```
-    fn chain<O: Slice<T>>(self, other: O) -> Chain<T, Self, O> {
+    fn chain<O: Slice<'a, T>>(self, other: O) -> Chain<T, Self, O> {
         Chain::new(self, other)
     }
 
@@ -194,7 +223,7 @@ pub trait Slice<T>: Sized {
     /// assert_eq!(chunks.next().unwrap(), [5]);
     /// assert!(chunks.next().is_none());
     /// ```
-    fn chunks(&self, size: usize) -> Chunks<T, Self> {
+    fn chunks(&'a self, size: usize) -> Chunks<T, Self> {
         Chunks::new(self, size)
     }
 
@@ -209,7 +238,7 @@ pub trait Slice<T>: Sized {
     /// let slice = [1, 2, 3, 4, 5];
     /// assert!(slice.chunks_exact(2).is_none());
     /// ```
-    fn chunks_exact(&self, size: usize) -> Option<Chunks<T, Self>> {
+    fn chunks_exact(&'a self, size: usize) -> Option<Chunks<T, Self>> {
         Chunks::new_exact(self, size)
     }
 
@@ -241,8 +270,39 @@ pub trait Slice<T>: Sized {
     ///
     /// assert_eq!(c, [1, 4, 2, 5, 3, 6]);
     /// ```
-    fn interleave<O: Slice<T>>(self, other: O) -> Interleave<T, Self, O> {
+    fn interleave<O: Slice<'a, T>>(self, other: O) -> Interleave<T, Self, O> {
         Interleave::new(self, other)
+    }
+
+    /// Takes a closure and creates a slice which calls that closure on index:
+    /// the equivalent of [`Iterator::map`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3];
+    /// assert_eq!(slice.map(|x| x == 2), [false, true, false]);
+    /// ```
+    fn map<F: Fn(T) -> U, U>(self, f: F) -> Map<T, Self, F> {
+        Map::new(self, f)
+    }
+
+    /// Takes a closure and creates a slice which calls that closure on mutable
+    /// index: the equivalent of [`Iterator::map`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let mut slice = [1, 2, 3];
+    /// assert_eq!(
+    ///     (&mut slice).map(|x| x == 2),
+    ///     [false, true, false]
+    /// );
+    /// ```
+    fn map_mut<F: FnMut(Self::Mut) -> U, U>(self, f: F) -> MapMut<T, Self, F, U> {
+        MapMut::new(self, f)
     }
 
     /// Reverses the slice: the equivalent of [`Iterator::rev`].
@@ -273,102 +333,17 @@ pub trait Slice<T>: Sized {
     /// assert_eq!(w.next().unwrap(), [3, 4, 5]);
     /// assert!(w.next().is_none());
     /// ```
-    fn windows(&self, size: usize) -> Windows<T, Self> {
+    fn windows(&'a self, size: usize) -> Windows<T, Self> {
         Windows::new(self, size)
     }
-
-    /// Returns `(&self[..at], &self[at..])`.
-    /// Returns `None` if `at` is out-of-bounds.
-    ///
-    /// Equivalent of [`slice::split`].
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use slice_utils::Slice;
-    /// let slice = [1, 2, 3, 4, 5, 6];
-    /// let (a, b) = slice.split(3).unwrap();
-    ///
-    /// assert_eq!(a, [1, 2, 3]);
-    /// assert_eq!(b, [4, 5, 6]);
-    /// ```
-    fn split(&self, at: usize) -> Option<SplitOf<T, &Self>> {
-        Some((SliceOf::new(self, ..at)?, SliceOf::new(self, at..)?))
-    }
-
-    /// Collects into a `Vec` by running a closure over each element.
-    ///
-    /// Only available on feature `std`.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use slice_utils::Slice;
-    /// let slice = [1, 2, 3];
-    /// let vec = slice.collect(|x| *x + 1);
-    ///
-    /// assert_eq!(vec, [2, 3, 4]);
-    /// ```
-    #[cfg(feature = "std")]
-    fn collect<F, U>(self, f: F) -> Vec<U>
-    where
-        F: for<'a> FnMut(&'a T) -> U,
-    {
-        (0..self.len())
-            .map(|i| self.get(i).unwrap())
-            .map(f)
-            .collect()
-    }
 }
 
-/// A mutable slice. See [`Slice`] for more information.
-pub trait SliceMut<T>: Slice<T> {
-    /// Mutably index the slice.
-    ///
-    /// If `index < self.len()`, this must succeed.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use slice_utils::SliceMut;
-    /// let mut slice = [1, 2, 3];
-    /// *slice.get_mut(2).unwrap() = 4;
-    /// assert_eq!(slice, [1, 2, 4]);
-    /// ```
-    fn get_mut(&mut self, index: usize) -> Option<&mut T>;
-
-    /// Takes a mutable sub-slice, returning `None` if the range is out-of-bounds.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use slice_utils::SliceMut;
-    /// let mut slice = [1, 2, 3, 4, 5];
-    /// let mut sliced = (&mut slice).slice_mut(2..).unwrap();
-    /// sliced[0] = 0;
-    ///
-    /// assert_eq!(slice, [1, 2, 0, 4, 5]);
-    /// ```
-    fn slice_mut<R: RangeBounds<usize>>(self, range: R) -> Option<SliceOfMut<T, Self>> {
-        SliceOfMut::new(self, range)
-    }
-
-    /// Calls a closure on each item, mutating it.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use slice_utils::SliceMut;
-    /// let mut slice = [1, 2, 3].slice_mut(..).unwrap();
-    /// slice.map(|x| *x += 1);
-    /// assert_eq!(slice, [2, 3, 4]);
-    /// ```
-    fn map<F>(&mut self, mut f: F)
-    where
-        F: for<'a> FnMut(&mut T),
-    {
-        for i in 0..self.len() {
-            f(self.get_mut(i).unwrap());
-        }
-    }
-}
+// macro_rules! mod_with_docs {
+//     ($( $mod:ident ),*) => {
+//         $(
+//             #[doc = "See [`" $mod:camel "`]"]
+//             mod $mod;
+//         )*
+//     };
+// }
+// use mod_with_docs;

@@ -1,46 +1,44 @@
 use core::marker::PhantomData;
 
-use crate::{Slice, SliceMut};
+use crate::Slice;
 
 /// A reversed slice, from [`Slice::reverse`].
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Hash)]
 pub struct Reverse<T, A>(pub A, PhantomData<fn() -> T>);
 
-impl<T, A> Reverse<T, A>
+impl<'a, T, A> Reverse<T, A>
 where
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
+    /// See [`Slice::reverse`].
     pub fn new(data: A) -> Self {
         Self(data, PhantomData)
     }
 }
 
-impl<T, A> Slice<T> for Reverse<T, A>
+impl<'a, T, A> Slice<'a, T> for Reverse<T, A>
 where
-    A: Slice<T>,
+    A: Slice<'a, T>,
 {
-    fn get(&self, index: usize) -> Option<&T> {
-        if index >= self.len() {
-            return None;
-        }
+    type Mut = A::Mut;
 
-        self.0.get(self.0.len() - index - 1)
+    fn get(&'a self, index: usize) -> Option<T> {
+        if index >= self.len() {
+            None
+        } else {
+            self.0.get(self.0.len() - 1 - index)
+        }
+    }
+
+    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
+        if index >= self.len() {
+            None
+        } else {
+            self.0.get_mut(self.0.len() - 1 - index)
+        }
     }
 
     fn len(&self) -> usize {
         self.0.len()
-    }
-}
-
-impl<T, A> SliceMut<T> for Reverse<T, A>
-where
-    A: SliceMut<T>,
-{
-    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        if index >= self.len() {
-            return None;
-        }
-
-        self.0.get_mut(self.0.len() - index - 1)
     }
 }

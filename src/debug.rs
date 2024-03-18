@@ -1,23 +1,26 @@
 use core::fmt;
 
-use crate::{Chain, Cycle, Interleave, Reverse, Slice, SliceMut, SliceOf, SliceOfMut};
+use crate::{Chain, Cycle, Interleave, Map, MapMut, Reverse, Slice, SliceOf};
 
 macro_rules! impl_debug {
     ($(
-        $typ:ident [$($lifetimes:lifetime),* $($generics:ident),*] = $bound:ident
+        $typ:ident [$a:ident $(, $b:ident)?]
     ;)*) =>{$(
         impl<
-            $($lifetimes,)* T, $($generics,)*
-        > fmt::Debug for $typ<$($lifetimes,)* T, $($generics,)*>
+            'a, T, $a, $($b,)?
+        > fmt::Debug for $typ<T, $a $(, $b)?>
         where
             T: fmt::Debug,
-            $($generics : $bound<T>,)*
+            $a: for<'b> Slice<'b, T>,
+            $($b: for<'b> Slice<'b, T, Mut = <$a as Slice<'b, T>>::Mut>,)?
         {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                let mut builder = f.debug_list();
+            fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+                let mut builder = fmt.debug_list();
+
                 for i in 0..self.len() {
                     builder.entry(&self.get(i).unwrap());
                 }
+
                 builder.finish()
             }
         }
@@ -25,10 +28,43 @@ macro_rules! impl_debug {
 }
 
 impl_debug! {
-    Chain[A, B] = Slice;
-    Cycle[A] = Slice;
-    Interleave[A, B] = Slice;
-    Reverse[A] = Slice;
-    SliceOf[A] = Slice;
-    SliceOfMut[A] = SliceMut;
+    Chain[A, B];
+    Cycle[A];
+    Interleave[A, B];
+    Reverse[A];
+    SliceOf[A];
+}
+
+impl<'a, T, A, F, U> fmt::Debug for Map<T, A, F>
+where
+    A: for<'b> Slice<'b, T>,
+    F: Fn(T) -> U,
+    U: fmt::Debug,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut builder = fmt.debug_list();
+
+        for i in 0..self.len() {
+            builder.entry(&self.get(i).unwrap());
+        }
+
+        builder.finish()
+    }
+}
+
+impl<'a, T, A, F, U, M> fmt::Debug for MapMut<T, A, F, U>
+where
+    T: fmt::Debug,
+    A: for<'b> Slice<'b, T, Mut = M>,
+    F: FnMut(M) -> U,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let mut builder = fmt.debug_list();
+
+        for i in 0..self.len() {
+            builder.entry(&self.get(i).unwrap());
+        }
+
+        builder.finish()
+    }
 }
