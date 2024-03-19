@@ -1,46 +1,61 @@
-use core::marker::PhantomData;
+use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
 
-use crate::Slice;
+/// Two chained slices; see [`Slice::chain`].
+pub struct Chain<S1, S2>(pub S1, pub S2);
 
-/// Two slices joined via [`Slice::chain`].
-#[derive(Clone, Copy, Hash)]
-pub struct Chain<T, A, B>(pub A, pub B, PhantomData<fn() -> T>);
-
-impl<'a, T, A, B> Chain<T, A, B>
+impl<S1, S2> Slice for Chain<S1, S2>
 where
-    A: Slice<'a, T>,
-    B: Slice<'a, T>,
+    S1: Slice,
+    S2: Slice<Output = S1::Output>,
 {
-    /// See [`Slice::chain`].
-    pub fn new(left: A, right: B) -> Self {
-        Self(left, right, PhantomData)
+    type Output = S1::Output;
+
+    fn len(&self) -> usize {
+        self.0.len() + self.1.len()
+    }
+
+    fn get_with<W: FnMut(&Self::Output) -> R, R>(&self, index: usize, f: &mut W) -> Option<R> {
+        self.0
+            .get_with(index, f)
+            .or_else(|| self.1.get_with(index - self.0.len(), f))
     }
 }
 
-impl<'a, T, M, A, B> Slice<'a, T> for Chain<T, A, B>
+impl<S1, S2> SliceOwned for Chain<S1, S2>
 where
-    A: Slice<'a, T, Mut = M>,
-    B: Slice<'a, T, Mut = M>,
+    S1: SliceOwned,
+    S2: SliceOwned<Output = S1::Output>,
 {
-    type Mut = A::Mut;
+    fn get_owned(&self, index: usize) -> Option<Self::Output> {
+        self.0
+            .get_owned(index)
+            .or_else(|| self.1.get_owned(index - self.0.len()))
+    }
+}
 
-    fn get(&'a self, index: usize) -> Option<T> {
+impl<S1, S2> SliceBorrowed for Chain<S1, S2>
+where
+    S1: SliceBorrowed,
+    S2: SliceBorrowed<Output = S1::Output>,
+{
+    fn get(&self, index: usize) -> Option<&Self::Output> {
         self.0
             .get(index)
             .or_else(|| self.1.get(index - self.0.len()))
     }
+}
 
-    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
+impl<S1, S2> SliceMut for Chain<S1, S2>
+where
+    S1: SliceMut,
+    S2: SliceMut<Output = S1::Output>,
+{
+    fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output> {
+        let offset = self.0.len();
         if let r @ Some(_) = self.0.get_mut(index) {
             r
-        } else if let r @ Some(_) = self.1.get_mut(index) {
-            r
         } else {
-            None
+            self.1.get_mut(index - offset)
         }
-    }
-
-    fn len(&self) -> usize {
-        self.0.len() + self.1.len()
     }
 }

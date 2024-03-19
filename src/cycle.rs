@@ -1,36 +1,46 @@
-use core::marker::PhantomData;
+use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
 
-use crate::Slice;
+/// An infinitely looped slice; see [`Slice::cycle`].
+pub struct Cycle<S>(pub S);
 
-/// An infinitely looped slice, from [`Slice::cycle`].
-#[derive(Clone, Copy, Hash)]
-pub struct Cycle<T, A>(pub A, PhantomData<fn() -> T>);
-
-impl<'a, T, A> Cycle<T, A>
+impl<S> Slice for Cycle<S>
 where
-    A: Slice<'a, T>,
+    S: Slice,
 {
-    /// See [`Slice::cycle`].
-    pub fn new(data: A) -> Self {
-        Self(data, PhantomData)
-    }
-}
-
-impl<'a, T, A> Slice<'a, T> for Cycle<T, A>
-where
-    A: Slice<'a, T>,
-{
-    type Mut = A::Mut;
-
-    fn get(&'a self, index: usize) -> Option<T> {
-        self.0.get(index % self.0.len())
-    }
-
-    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
-        self.0.get_mut(index % self.0.len())
-    }
+    type Output = S::Output;
 
     fn len(&self) -> usize {
         usize::MAX
+    }
+
+    fn get_with<F: FnMut(&Self::Output) -> U, U>(&self, index: usize, f: &mut F) -> Option<U> {
+        self.0.get_with(index % self.0.len(), f)
+    }
+}
+
+impl<S> SliceOwned for Cycle<S>
+where
+    S: SliceOwned,
+{
+    fn get_owned(&self, index: usize) -> Option<Self::Output> {
+        self.0.get_owned(index % self.0.len())
+    }
+}
+
+impl<S> SliceBorrowed for Cycle<S>
+where
+    S: SliceBorrowed,
+{
+    fn get(&self, index: usize) -> Option<&Self::Output> {
+        self.0.get(index % self.0.len())
+    }
+}
+
+impl<S> SliceMut for Cycle<S>
+where
+    S: SliceMut,
+{
+    fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output> {
+        self.0.get_mut(index % self.0.len())
     }
 }

@@ -1,53 +1,66 @@
-use core::marker::PhantomData;
+use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
 
-use crate::Slice;
+/// Two interleaved slices; see [`Slice::interleave`].
+pub struct Interleave<S1, S2>(pub S1, pub S2);
 
-/// Two interleaved slices, from [`Slice::interleave`].
-pub struct Interleave<T, A, B> {
-    pub left: A,
-    pub right: B,
-    _marker: PhantomData<fn() -> T>,
-}
-
-impl<'a, T, A, B> Interleave<T, A, B>
+impl<S1, S2> Slice for Interleave<S1, S2>
 where
-    A: Slice<'a, T>,
-    B: Slice<'a, T>,
+    S1: Slice,
+    S2: Slice<Output = S1::Output>,
 {
-    /// See [`Slice::interleave`].
-    pub fn new(left: A, right: B) -> Self {
-        Self {
-            left,
-            right,
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<'a, T, M, A, B> Slice<'a, T> for Interleave<T, A, B>
-where
-    A: Slice<'a, T, Mut = M>,
-    B: Slice<'a, T, Mut = M>,
-{
-    type Mut = A::Mut;
-
-    fn get(&'a self, index: usize) -> Option<T> {
-        if index % 2 == 0 {
-            self.left.get(index / 2)
-        } else {
-            self.right.get(index / 2)
-        }
-    }
-
-    fn get_mut(&'a mut self, index: usize) -> Option<Self::Mut> {
-        if index % 2 == 0 {
-            self.left.get_mut(index / 2)
-        } else {
-            self.right.get_mut(index / 2)
-        }
-    }
+    type Output = S1::Output;
 
     fn len(&self) -> usize {
-        self.left.len() + self.right.len()
+        self.0.len() + self.1.len()
+    }
+
+    fn get_with<W: FnMut(&Self::Output) -> R, R>(&self, index: usize, f: &mut W) -> Option<R> {
+        if index % 2 == 0 {
+            self.0.get_with(index / 2, f)
+        } else {
+            self.1.get_with(index / 2, f)
+        }
+    }
+}
+
+impl<S1, S2> SliceOwned for Interleave<S1, S2>
+where
+    S1: SliceOwned,
+    S2: SliceOwned<Output = S1::Output>,
+{
+    fn get_owned(&self, index: usize) -> Option<Self::Output> {
+        if index % 2 == 0 {
+            self.0.get_owned(index / 2)
+        } else {
+            self.1.get_owned(index / 2)
+        }
+    }
+}
+
+impl<S1, S2> SliceBorrowed for Interleave<S1, S2>
+where
+    S1: SliceBorrowed,
+    S2: SliceBorrowed<Output = S1::Output>,
+{
+    fn get(&self, index: usize) -> Option<&Self::Output> {
+        if index % 2 == 0 {
+            self.0.get(index / 2)
+        } else {
+            self.1.get(index / 2)
+        }
+    }
+}
+
+impl<S1, S2> SliceMut for Interleave<S1, S2>
+where
+    S1: SliceMut,
+    S2: SliceMut<Output = S1::Output>,
+{
+    fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output> {
+        if index % 2 == 0 {
+            self.0.get_mut(index / 2)
+        } else {
+            self.1.get_mut(index / 2)
+        }
     }
 }

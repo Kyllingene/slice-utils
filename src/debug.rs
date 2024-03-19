@@ -1,70 +1,93 @@
 use core::fmt;
 
-use crate::{Chain, Cycle, Interleave, Map, MapMut, Reverse, Slice, SliceOf};
+use crate::{
+    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOwned,
+};
 
 macro_rules! impl_debug {
     ($(
-        $typ:ident [$a:ident $(, $b:ident)?]
-    ;)*) =>{$(
+        $typ:ident [$($generics:ident),*]
+    ;)*) => {$(
         impl<
-            'a, T, $a, $($b,)?
-        > fmt::Debug for $typ<T, $a $(, $b)?>
+            T, S $(, $generics)*,
+        > fmt::Debug for $typ<S $(, $generics)*>
         where
             T: fmt::Debug,
-            $a: for<'b> Slice<'b, T>,
-            $($b: for<'b> Slice<'b, T, Mut = <$a as Slice<'b, T>>::Mut>,)?
+            S: Slice<Output = T>,
+            $( $generics: Slice<Output = T>,)*
         {
-            fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-                let mut builder = fmt.debug_list();
-
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                let mut list = f.debug_list();
                 for i in 0..self.len() {
-                    builder.entry(&self.get(i).unwrap());
+                    self.get_with(i, &mut |x| { list.entry(x); });
                 }
-
-                builder.finish()
+                list.finish()
             }
         }
     )*};
 }
 
 impl_debug! {
-    Chain[A, B];
-    Cycle[A];
-    Interleave[A, B];
-    Reverse[A];
-    SliceOf[A];
+    Chain[S2];
+    Interleave[S2];
+    Reverse[];
 }
 
-impl<'a, T, A, F, U> fmt::Debug for Map<T, A, F>
+// Separate impl to avoid infinite debug printing
+impl<T, S> fmt::Debug for Cycle<S>
 where
-    A: for<'b> Slice<'b, T>,
-    F: Fn(T) -> U,
-    U: fmt::Debug,
+    T: fmt::Debug,
+    S: Slice<Output = T>,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut builder = fmt.debug_list();
-
-        for i in 0..self.len() {
-            builder.entry(&self.get(i).unwrap());
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        struct Ellipses;
+        impl fmt::Debug for Ellipses {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "...")
+            }
         }
 
-        builder.finish()
+        let mut list = f.debug_list();
+        for i in 0..self.0.len() {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.entry(&Ellipses);
+        list.finish()
     }
 }
 
-impl<'a, T, A, F, U, M> fmt::Debug for MapMut<T, A, F, U>
+impl<T, S, F, U> fmt::Debug for MapOwned<S, F>
 where
-    T: fmt::Debug,
-    A: for<'b> Slice<'b, T, Mut = M>,
-    F: FnMut(M) -> U,
+    S: SliceOwned<Output = T>,
+    F: Fn(T) -> U,
+    U: fmt::Debug,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let mut builder = fmt.debug_list();
-
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut list = f.debug_list();
         for i in 0..self.len() {
-            builder.entry(&self.get(i).unwrap());
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
         }
+        list.finish()
+    }
+}
 
-        builder.finish()
+impl<T, S, F, U> fmt::Debug for MapBorrowed<S, F>
+where
+    S: SliceBorrowed<Output = T>,
+    F: Fn(&T) -> U,
+    U: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut list = f.debug_list();
+        for i in 0..self.len() {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.finish()
     }
 }

@@ -1,72 +1,29 @@
-use core::cmp::PartialEq;
-
-use crate::{Chain, Cycle, Interleave, Map, MapMut, Reverse, Slice, SliceOf};
+use crate::{
+    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOwned,
+};
 
 macro_rules! impl_eq {
     ($(
-        $typ:ident [$a:ident $(, $b:ident)?]
-    ;)*) =>{$(
+        $typ:ident [$($generics:ident),*]
+    ;)*) => {$(
         impl<
-            'a, T, $a, $($b,)?
-        > PartialEq<[T]> for $typ<T, $a $(, $b)?>
+            T, S, O, V $(, $generics)*,
+        > PartialEq<O> for $typ<S $(, $generics)*>
         where
-            T: PartialEq + Copy,
-            $a: for<'b> Slice<'b, T>,
-            $($b: for<'b> Slice<'b, T, Mut = <$a as Slice<'b, T>>::Mut>,)?
-        {
-            fn eq(&self, other: &[T]) -> bool {
-                if self.len() != other.len() {
-                    false
-                } else {
-                    for i in 0..self.len() {
-                        if self.get(i) != Some(other[i]) {
-                            return false;
-                        }
-                    }
-
-                    true
-                }
-            }
-        }
-
-        impl<
-            'a, T, $a, $($b,)?
-        > PartialEq<[T]> for $typ<&'a T, $a $(, $b)?>
-        where
-            T: PartialEq,
-            $a: for<'b> Slice<'b, &'b T>,
-            $($b: for<'b> Slice<'b, &'b T, Mut = <$a as Slice<'b, &'b T>>::Mut>,)?
-        {
-            fn eq(&self, other: &[T]) -> bool {
-                if self.len() != other.len() {
-                    false
-                } else {
-                    for i in 0..self.len() {
-                        if self.get(i) != Some(&other[i]) {
-                            return false;
-                        }
-                    }
-
-                    true
-                }
-            }
-        }
-
-        impl<
-            'a, T, O, $a, $($b,)?
-        > PartialEq<O> for $typ<T, $a $(, $b)?>
-        where
-            T: PartialEq,
-            O: for<'b> Slice<'b, T>,
-            $a: for<'b> Slice<'b, T>,
-            $($b: for<'b> Slice<'b, T, Mut = <$a as Slice<'b, T>>::Mut>,)?
+            V: PartialEq<T>,
+            S: SliceOwned<Output = T>,
+            O: Slice<Output = V>,
+            $( $generics: SliceOwned<Output = T>,)*
         {
             fn eq(&self, other: &O) -> bool {
                 if self.len() != other.len() {
                     false
                 } else {
                     for i in 0..self.len() {
-                        if self.get(i) != other.get(i) {
+                        if other
+                            .get_with(i, &mut |x| x != &self.get_owned(i).unwrap())
+                            .unwrap_or(true)
+                        {
                             return false;
                         }
                     }
@@ -79,47 +36,28 @@ macro_rules! impl_eq {
 }
 
 impl_eq! {
-    Chain[A, B];
-    Cycle[A];
-    Interleave[A, B];
-    Reverse[A];
-    SliceOf[A];
+    Chain[S2];
+    Cycle[];
+    Interleave[S2];
+    Reverse[];
 }
 
-impl<'a, T, A, F, U> PartialEq<[U]> for Map<T, A, F>
+impl<T, S, O, F, U, V> PartialEq<O> for MapOwned<S, F>
 where
-    A: for<'b> Slice<'b, T>,
+    S: SliceOwned<Output = T>,
+    O: Slice<Output = V>,
     F: Fn(T) -> U,
-    U: PartialEq + Copy,
-{
-    fn eq(&self, other: &[U]) -> bool {
-        if self.len() != other.len() {
-            false
-        } else {
-            for i in 0..self.len() {
-                if self.get(i) != Some(other[i]) {
-                    return false;
-                }
-            }
-
-            true
-        }
-    }
-}
-
-impl<'a, T, A, F, U, O> PartialEq<O> for Map<T, A, F>
-where
-    A: for<'b> Slice<'b, T>,
-    F: Fn(T) -> U,
-    U: PartialEq,
-    O: for<'b> Slice<'b, U>,
+    V: PartialEq<U>,
 {
     fn eq(&self, other: &O) -> bool {
         if self.len() != other.len() {
             false
         } else {
             for i in 0..self.len() {
-                if self.get(i) != other.get(i) {
+                if other
+                    .get_with(i, &mut |x| x != &self.get_owned(i).unwrap())
+                    .unwrap_or(true)
+                {
                     return false;
                 }
             }
@@ -129,40 +67,22 @@ where
     }
 }
 
-impl<'a, T, A, F, U, M> PartialEq<[T]> for MapMut<T, A, F, U>
+impl<T, S, O, F, U, V> PartialEq<O> for MapBorrowed<S, F>
 where
-    T: PartialEq + Copy,
-    A: for<'b> Slice<'b, T, Mut = M>,
-    F: FnMut(M) -> U,
-{
-    fn eq(&self, other: &[T]) -> bool {
-        if self.len() != other.len() {
-            false
-        } else {
-            for i in 0..self.len() {
-                if self.get(i) != Some(other[i]) {
-                    return false;
-                }
-            }
-
-            true
-        }
-    }
-}
-
-impl<'a, T, A, F, U, M, O> PartialEq<O> for MapMut<T, A, F, U>
-where
-    T: PartialEq,
-    A: for<'b> Slice<'b, T, Mut = M>,
-    F: FnMut(M) -> U,
-    O: for<'b> Slice<'b, T>,
+    S: SliceBorrowed<Output = T>,
+    O: Slice<Output = V>,
+    F: Fn(&T) -> U,
+    V: PartialEq<U>,
 {
     fn eq(&self, other: &O) -> bool {
         if self.len() != other.len() {
             false
         } else {
             for i in 0..self.len() {
-                if self.get(i) != other.get(i) {
+                if other
+                    .get_with(i, &mut |x| x != &self.get_owned(i).unwrap())
+                    .unwrap_or(true)
+                {
                     return false;
                 }
             }
