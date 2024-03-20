@@ -68,7 +68,7 @@ impl<T> SliceMut for [T] {
 
 impl<'a, S> Slice for &'a S
 where
-    S: Slice,
+    S: Slice + ?Sized,
 {
     type Output = S::Output;
 
@@ -81,19 +81,18 @@ where
     }
 }
 
-// TODO: is this acceptable?
-// impl<'a, S> SliceOwned for &'a S
-// where
-//     S: SliceOwned,
-// {
-//     fn get_owned(&self, index: usize) -> Option<Self::Output> {
-//         (*self).get_owned(index)
-//     }
-// }
+impl<'a, S> SliceOwned for &'a S
+where
+    S: SliceOwned + ?Sized,
+{
+    fn get_owned(&self, index: usize) -> Option<Self::Output> {
+        (*self).get_owned(index)
+    }
+}
 
 impl<'a, S> SliceBorrowed for &'a S
 where
-    S: SliceBorrowed,
+    S: SliceBorrowed + ?Sized,
 {
     fn get(&self, index: usize) -> Option<&Self::Output> {
         (**self).get(index)
@@ -102,7 +101,7 @@ where
 
 impl<'a, S> Slice for &'a mut S
 where
-    S: Slice,
+    S: Slice + ?Sized,
 {
     type Output = S::Output;
 
@@ -117,7 +116,7 @@ where
 
 impl<'a, S> SliceOwned for &'a mut S
 where
-    S: SliceOwned,
+    S: SliceOwned + ?Sized,
 {
     fn get_owned(&self, index: usize) -> Option<Self::Output> {
         (**self).get_owned(index)
@@ -126,7 +125,7 @@ where
 
 impl<'a, S> SliceBorrowed for &'a mut S
 where
-    S: SliceBorrowed,
+    S: SliceBorrowed + ?Sized,
 {
     fn get(&self, index: usize) -> Option<&Self::Output> {
         (**self).get(index)
@@ -135,7 +134,7 @@ where
 
 impl<'a, S> SliceMut for &'a mut S
 where
-    S: SliceMut,
+    S: SliceMut + ?Sized,
 {
     fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output> {
         (**self).get_mut(index)

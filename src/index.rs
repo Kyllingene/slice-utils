@@ -1,6 +1,6 @@
 use core::ops::{Index, IndexMut};
 
-use crate::{Chain, Cycle, Interleave, Reverse, Slice, SliceBorrowed, SliceMut};
+use crate::{Chain, Cycle, Interleave, Reverse, Slice, SliceBorrowed, SliceMut, SliceOf};
 
 macro_rules! impl_index {
     ($(
@@ -17,7 +17,7 @@ macro_rules! impl_index {
 
             fn index(&self, index: usize) -> &Self::Output {
                 self.get(index).unwrap_or_else(|| {
-                    panic!("index out of bounds: len is {} but index is {index}", self.len())
+                    panic!("index out of bounds: the len is {} but the index is {index}", self.len())
                 })
             }
         }
@@ -32,7 +32,7 @@ macro_rules! impl_index {
             fn index_mut(&mut self, index: usize) -> &mut Self::Output {
                 let len = self.len();
                 self.get_mut(index).unwrap_or_else(|| {
-                    panic!("index out of bounds: len is {len} but index is {index}")
+                    panic!("index out of bounds: the len is {len} but the index is {index}")
                 })
             }
         }
@@ -44,4 +44,5 @@ impl_index! {
     Cycle[];
     Interleave[S2];
     Reverse[];
+    SliceOf[];
 }

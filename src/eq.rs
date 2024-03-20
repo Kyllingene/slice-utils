@@ -1,5 +1,6 @@
 use crate::{
-    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOwned,
+    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOf,
+    SliceOwned,
 };
 
 macro_rules! impl_eq {
@@ -40,6 +41,7 @@ impl_eq! {
     Cycle[];
     Interleave[S2];
     Reverse[];
+    SliceOf[];
 }
 
 impl<T, S, O, F, U, V> PartialEq<O> for MapOwned<S, F>

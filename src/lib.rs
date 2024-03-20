@@ -1,4 +1,4 @@
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
 #![doc = include_str!("../README.md")]
 #![warn(missing_docs)]
 
@@ -9,17 +9,23 @@ mod eq;
 mod impls;
 mod index;
 mod interleave;
+mod iter;
 mod map;
 mod reverse;
+mod slicing;
 
 #[cfg(test)]
 mod test;
 
+use core::ops::RangeBounds;
+
 pub use chain::Chain;
 pub use cycle::Cycle;
 pub use interleave::Interleave;
+pub use iter::{IterBorrowed, IterOwned};
 pub use map::{MapBorrowed, MapOwned};
 pub use reverse::Reverse;
+pub use slicing::SliceOf;
 
 /// Clones each item on access; see [`SliceBorrowed::cloned`].
 pub type Cloned<S> = MapBorrowed<S, for<'a> fn(&<S as Slice>::Output) -> <S as Slice>::Output>;
@@ -122,6 +128,43 @@ pub trait Slice {
     {
         Reverse(self)
     }
+
+    /// Create a sub-slice of the slice.
+    ///
+    /// Analagous to slicing `&[T]`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5].slice(1..4).unwrap();
+    /// assert_eq!(slice, [2, 3, 4]);
+    /// ```
+    fn slice<R: RangeBounds<usize>>(self, range: R) -> Option<SliceOf<Self>>
+    where
+        Self: Sized,
+    {
+        SliceOf::new(self, range)
+    }
+
+    /// Returns `(&self[..at], &self[at..])`.
+    /// Returns `None` if `at` is out-of-bounds.
+    ///
+    /// Equivalent of [`slice::split`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::Slice;
+    /// let slice = [1, 2, 3, 4, 5, 6];
+    /// let (a, b) = slice.split(3).unwrap();
+    ///
+    /// assert_eq!(a, [1, 2, 3]);
+    /// assert_eq!(b, [4, 5, 6]);
+    /// ```
+    fn split(&self, at: usize) -> Option<(SliceOf<&Self>, SliceOf<&Self>)> {
+        Some((SliceOf::new(self, ..at)?, SliceOf::new(self, at..)?))
+    }
 }
 
 /// A [`Slice`] that can return owned values.
@@ -145,6 +188,39 @@ pub trait SliceOwned: Slice {
         Self: Sized,
     {
         MapOwned(self, f)
+    }
+
+    /// Creates an iterator over the slice.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::{Slice, SliceOwned};
+    /// let slice = [1, 2].chain([3]);
+    /// let mut iter = slice.iter();
+    /// assert_eq!(iter.next(), Some(1));
+    /// assert_eq!(iter.next(), Some(2));
+    /// assert_eq!(iter.next(), Some(3));
+    /// assert!(iter.next().is_none());
+    /// ```
+    fn iter(self) -> IterOwned<Self>
+    where
+        Self: Sized,
+    {
+        IterOwned::new(self)
+    }
+
+    /// Collect the slice into a `Vec`. Only available on feature `std`.
+    ///
+    /// Analagous to [`Iterator::collect`].
+    #[cfg(feature = "std")]
+    fn collect(&self) -> Vec<Self::Output> {
+        let mut v = Vec::with_capacity(self.len());
+        for i in 0..self.len() {
+            v.push(self.get_owned(i).unwrap());
+        }
+
+        v
     }
 }
 
@@ -194,17 +270,27 @@ pub trait SliceBorrowed: Slice {
     {
         MapBorrowed(self, Clone::clone)
     }
+
+    /// Creates an iterator over the slice.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::{Slice, SliceBorrowed};
+    /// let slice = [1, 2].chain([3]);
+    /// let mut iter = slice.iter();
+    /// assert_eq!(iter.next(), Some(&1));
+    /// assert_eq!(iter.next(), Some(&2));
+    /// assert_eq!(iter.next(), Some(&3));
+    /// assert!(iter.next().is_none());
+    /// ```
+    fn iter(&self) -> IterBorrowed<Self> {
+        IterBorrowed::new(self)
+    }
 }
 
 /// A [`Slice`] that can return mutably borrowed values.
 pub trait SliceMut: Slice {
     /// Index the slice, returning a mutably borrowed value.
     fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output>;
-
-    // fn map<F: Fn(&mut Self::Output) -> R, R>(self, f: F) -> MapMut<Self, F>
-    // where
-    //     Self: Sized,
-    // {
-    //     MapMut(self, f)
-    // }
 }

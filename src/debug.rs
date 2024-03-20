@@ -1,7 +1,8 @@
 use core::fmt;
 
 use crate::{
-    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOwned,
+    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOf,
+    SliceOwned,
 };
 
 macro_rules! impl_debug {
@@ -31,6 +32,7 @@ impl_debug! {
     Chain[S2];
     Interleave[S2];
     Reverse[];
+    SliceOf[];
 }
 
 // Separate impl to avoid infinite debug printing
