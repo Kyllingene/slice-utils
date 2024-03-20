@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 mod chain;
+mod chunks;
 mod cycle;
 mod debug;
 mod eq;
@@ -21,6 +22,7 @@ mod test;
 use core::ops::RangeBounds;
 
 pub use chain::Chain;
+pub use chunks::{ArrayChunksBorrowed, ArrayChunksOwned, ChunksBorrowed, ChunksOwned};
 pub use cycle::Cycle;
 pub use interleave::Interleave;
 pub use iter::{IterBorrowed, IterOwned};
@@ -174,6 +176,34 @@ pub trait SliceOwned: Slice {
     /// Index the slice, returning an owned value.
     fn get_owned(&self, index: usize) -> Option<Self::Output>;
 
+    /// Return an iterator over arrays covering consecutive portions of the
+    /// slice.
+    ///
+    /// Analagous to [`slice::array_chunks`].
+    ///
+    /// # Panics
+    ///
+    /// If `N == 0`, panics.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::{SliceOwned};
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut iter = slice.array_chunks::<2>();
+    ///
+    /// assert_eq!(iter.next(), Some([1, 2]));
+    /// assert_eq!(iter.next(), Some([3, 4]));
+    /// assert!(iter.next().is_none());
+    /// assert_eq!(iter.remainder(), [5]);
+    /// ```
+    fn array_chunks<const N: usize>(self) -> ArrayChunksOwned<Self, N>
+    where
+        Self: Sized,
+    {
+        ArrayChunksOwned::new(self)
+    }
+
     /// Return an iterator over arrays covering overlapping portions of the
     /// slice.
     ///
@@ -200,6 +230,31 @@ pub trait SliceOwned: Slice {
         Self: Sized,
     {
         ArrayWindowsOwned::new(self)
+    }
+
+    /// Return an iterator over slices covering consecutive portions of the
+    /// slice.
+    ///
+    /// Analagous to [`slice::chunks`].
+    ///
+    /// # Panics
+    ///
+    /// If `size == 0`, panics.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::SliceOwned;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut iter = slice.chunks(2);
+    ///
+    /// assert_eq!(iter.next().unwrap(), [1, 2]);
+    /// assert_eq!(iter.next().unwrap(), [3, 4]);
+    /// assert_eq!(iter.next().unwrap(), [5]);
+    /// assert!(iter.next().is_none());
+    /// ```
+    fn chunks(&self, size: usize) -> ChunksOwned<Self> {
+        ChunksOwned::new(self, size)
     }
 
     /// Call a closure on index, returning a new type.
@@ -247,7 +302,7 @@ pub trait SliceOwned: Slice {
     ///
     /// # Panics
     ///
-    /// If `N == 0`, panics.
+    /// If `size == 0`, panics.
     ///
     /// # Examples
     ///
@@ -283,7 +338,32 @@ pub trait SliceOwned: Slice {
 pub trait SliceBorrowed: Slice {
     /// Index the slice, returning a borrowed value.
     fn get(&self, index: usize) -> Option<&Self::Output>;
+
+    /// Return an iterator over arrays covering consecutive portions of the
+    /// slice.
     ///
+    /// Analagous to [`slice::array_chunks`].
+    ///
+    /// # Panics
+    ///
+    /// If `N == 0`, panics.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::SliceBorrowed;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut iter = slice.array_chunks::<2>();
+    ///
+    /// assert_eq!(iter.next(), Some([&1, &2]));
+    /// assert_eq!(iter.next(), Some([&3, &4]));
+    /// assert!(iter.next().is_none());
+    /// assert_eq!(iter.remainder(), [5]);
+    /// ```
+    fn array_chunks<const N: usize>(&self) -> ArrayChunksBorrowed<Self, N> {
+        ArrayChunksBorrowed::new(self)
+    }
+
     /// Return an iterator over arrays covering overlapping portions of the
     /// slice.
     ///
@@ -296,7 +376,7 @@ pub trait SliceBorrowed: Slice {
     /// # Examples
     ///
     /// ```rust
-    /// # use slice_utils::{SliceBorrowed};
+    /// # use slice_utils::SliceBorrowed;
     /// let slice = [1, 2, 3, 4, 5];
     /// let mut iter = slice.array_windows::<3>();
     ///
@@ -307,6 +387,31 @@ pub trait SliceBorrowed: Slice {
     /// ```
     fn array_windows<const N: usize>(&self) -> ArrayWindowsBorrowed<Self, N> {
         ArrayWindowsBorrowed::new(self)
+    }
+
+    /// Return an iterator over slices covering consecutive portions of the
+    /// slice.
+    ///
+    /// Analagous to [`slice::chunks`].
+    ///
+    /// # Panics
+    ///
+    /// If `size == 0`, panics.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::SliceBorrowed;
+    /// let slice = [1, 2, 3, 4, 5];
+    /// let mut iter = slice.chunks(2);
+    ///
+    /// assert_eq!(iter.next().unwrap(), [1, 2]);
+    /// assert_eq!(iter.next().unwrap(), [3, 4]);
+    /// assert_eq!(iter.next().unwrap(), [5]);
+    /// assert!(iter.next().is_none());
+    /// ```
+    fn chunks(&self, size: usize) -> ChunksBorrowed<Self> {
+        ChunksBorrowed::new(self, size)
     }
 
     /// Call a closure on index, returning a new type.
@@ -375,7 +480,7 @@ pub trait SliceBorrowed: Slice {
     ///
     /// # Panics
     ///
-    /// If `N == 0`, panics.
+    /// If `size == 0`, panics.
     ///
     /// # Examples
     ///
