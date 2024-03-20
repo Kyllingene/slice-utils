@@ -30,7 +30,7 @@ fn index() {
     let slice = [1, 2, 3, 4].slice(..).unwrap();
 
     #[allow(unconditional_panic)]
-    slice[4];
+    let _ = slice[4];
 }
 
 #[test]
@@ -43,8 +43,11 @@ fn slices() {
         assert_eq!(s.cycle().get_owned(4), Some(2));
     }
 
-    foo(&[1, 2, 3]);
-    bar(&[1, 2, 3]);
+    #[allow(clippy::needless_borrows_for_generic_args)]
+    {
+        foo(&[1, 2, 3]);
+        bar(&[1, 2, 3]);
+    }
 
     assert_eq!((&[1, 2, 3]).rev().get(0), Some(&3));
 }
