@@ -4,6 +4,7 @@ macro_rules! map {
     ($owned:ident, $in:ty, $fn:ident) => {
         paste::paste! {
             #[doc = "Maps using a closure on index; see [`" [<Slice $owned>] "::map`]."]
+            #[derive(Clone, Copy, Hash)]
             pub struct [<Map $owned>]<S, F>(pub S, pub F);
 
             impl<S, F, U> Slice for [<Map $owned>]<S, F>

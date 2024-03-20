@@ -1,8 +1,8 @@
 use core::fmt;
 
 use crate::{
-    Chain, Cycle, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed, SliceOf,
-    SliceOwned,
+    Chain, Cycle, FromFn, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed,
+    SliceOf, SliceOwned,
 };
 
 macro_rules! impl_debug {
@@ -82,6 +82,22 @@ where
     S: SliceBorrowed<Output = T>,
     F: Fn(&T) -> U,
     U: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut list = f.debug_list();
+        for i in 0..self.len() {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.finish()
+    }
+}
+
+impl<F, T> fmt::Debug for FromFn<F>
+where
+    F: Fn(usize) -> Option<T>,
+    T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut list = f.debug_list();

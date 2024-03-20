@@ -7,6 +7,7 @@ mod chunks;
 mod cycle;
 mod debug;
 mod eq;
+mod fromfn;
 mod impls;
 mod index;
 mod interleave;
@@ -24,6 +25,7 @@ use core::ops::RangeBounds;
 pub use chain::Chain;
 pub use chunks::{ArrayChunksBorrowed, ArrayChunksOwned, ChunksBorrowed, ChunksOwned};
 pub use cycle::Cycle;
+pub use fromfn::FromFn;
 pub use interleave::Interleave;
 pub use iter::{IterBorrowed, IterOwned};
 pub use map::{MapBorrowed, MapOwned};
@@ -154,7 +156,7 @@ pub trait Slice {
     /// Returns `(&self[..at], &self[at..])`.
     /// Returns `None` if `at` is out-of-bounds.
     ///
-    /// Equivalent of [`slice::split`].
+    /// Analagous to [`slice::split`].
     ///
     /// # Examples
     ///
@@ -503,4 +505,22 @@ pub trait SliceBorrowed: Slice {
 pub trait SliceMut: Slice {
     /// Index the slice, returning a mutably borrowed value.
     fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output>;
+}
+
+/// A slice made by calling a closure on the index.
+///
+/// Analagous to [`core::iter::from_fn`].
+///
+/// # Examples
+///
+/// ```rust
+/// # use slice_utils::SliceOwned;
+/// let slice = slice_utils::from_fn(|i| Some(i * i), Some(5));
+/// assert_eq!(slice, [0, 1, 4, 9, 16]);
+/// ```
+pub fn from_fn<F, T>(f: F, len: Option<usize>) -> FromFn<F>
+where
+    F: Fn(usize) -> Option<T>,
+{
+    FromFn::new(f, len)
 }
