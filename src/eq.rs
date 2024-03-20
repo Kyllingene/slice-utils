@@ -1,6 +1,6 @@
 use crate::{
     Chain, Cycle, FromFn, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed,
-    SliceOf, SliceOwned,
+    SliceOf, SliceOwned, Zip,
 };
 
 macro_rules! impl_eq {
@@ -99,6 +99,31 @@ where
     O: Slice<Output = U>,
     F: Fn(usize) -> Option<T>,
     U: PartialEq<T>,
+{
+    fn eq(&self, other: &O) -> bool {
+        if self.len() != other.len() {
+            false
+        } else {
+            for i in 0..self.len() {
+                if other
+                    .get_with(i, &mut |x| x != &self.get_owned(i).unwrap())
+                    .unwrap_or(true)
+                {
+                    return false;
+                }
+            }
+
+            true
+        }
+    }
+}
+
+impl<T, O, U, S1, S2> PartialEq<O> for Zip<S1, S2>
+where
+    O: Slice<Output = U>,
+    U: PartialEq<(T, T)>,
+    S1: SliceOwned<Output = T>,
+    S2: SliceOwned<Output = T>,
 {
     fn eq(&self, other: &O) -> bool {
         if self.len() != other.len() {

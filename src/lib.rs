@@ -16,6 +16,7 @@ mod map;
 mod reverse;
 mod slicing;
 mod windows;
+mod zip;
 
 #[cfg(test)]
 mod test;
@@ -32,6 +33,7 @@ pub use map::{MapBorrowed, MapOwned};
 pub use reverse::Reverse;
 pub use slicing::SliceOf;
 pub use windows::{ArrayWindowsBorrowed, ArrayWindowsOwned, WindowsBorrowed, WindowsOwned};
+pub use zip::Zip;
 
 /// Clones each item on access; see [`SliceBorrowed::cloned`].
 pub type Cloned<S> = MapBorrowed<S, for<'a> fn(&<S as Slice>::Output) -> <S as Slice>::Output>;
@@ -320,6 +322,35 @@ pub trait SliceOwned: Slice {
     /// ```
     fn windows(&self, size: usize) -> WindowsOwned<Self> {
         WindowsOwned::new(self, size)
+    }
+
+    /// Zip two slices into a single slice, where indexing returns a tuple of
+    /// their items.
+    ///
+    /// Analagous to [`Iterator::zip`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::SliceOwned;
+    /// let a = [1, 2, 3];
+    /// let b = [4, 5, 6, 7];
+    /// let slice = a.zip(b);
+    ///
+    /// assert_eq!(
+    ///     slice,
+    ///     [
+    ///         (1, 4),
+    ///         (2, 5),
+    ///         (3, 6),
+    ///     ]
+    /// );
+    /// ```
+    fn zip<O: SliceOwned>(self, other: O) -> Zip<Self, O>
+    where
+        Self: Sized,
+    {
+        Zip(self, other)
     }
 
     /// Collect the slice into a `Vec`. Only available on feature `std`.

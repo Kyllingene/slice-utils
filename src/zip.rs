@@ -1,6 +1,7 @@
 use crate::{Slice, SliceOwned};
 
-#[derive(Debug, Clone, Copy)]
+/// Two slices zipped together; see [`SliceOwned::zip`].
+#[derive(Clone, Copy, Hash)]
 pub struct Zip<S1, S2>(pub S1, pub S2);
 
 // TODO: can this be less strict?
