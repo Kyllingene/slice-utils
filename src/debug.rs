@@ -1,8 +1,9 @@
 use core::fmt;
 
 use crate::{
-    Chain, Cycle, FromFn, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed,
-    SliceOf, SliceOwned, Zip,
+    ArrayWindowsBorrowed, ArrayWindowsOwned, Chain, Cycle, FromFn, Interleave, MapBorrowed,
+    MapOwned, Reverse, Slice, SliceBorrowed, SliceOf, SliceOwned, WindowsBorrowed, WindowsOwned,
+    Zip,
 };
 
 macro_rules! impl_debug {
@@ -119,6 +120,70 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut list = f.debug_list();
         for i in 0..self.len() {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.finish()
+    }
+}
+
+impl<'a, S, T> fmt::Debug for WindowsOwned<'a, S>
+where
+    S: SliceOwned<Output = T>,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut list = f.debug_list();
+        for i in 0..Slice::len(self) {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.finish()
+    }
+}
+
+impl<'a, S, T> fmt::Debug for WindowsBorrowed<'a, S>
+where
+    S: SliceBorrowed<Output = T>,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut list = f.debug_list();
+        for i in 0..Slice::len(self) {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.finish()
+    }
+}
+
+impl<S, T, const N: usize> fmt::Debug for ArrayWindowsOwned<S, N>
+where
+    S: SliceOwned<Output = T>,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut list = f.debug_list();
+        for i in 0..Slice::len(self) {
+            self.get_with(i, &mut |x| {
+                list.entry(x);
+            });
+        }
+        list.finish()
+    }
+}
+
+impl<'a, S, T, const N: usize> fmt::Debug for ArrayWindowsBorrowed<'a, S, N>
+where
+    S: SliceBorrowed<Output = T>,
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut list = f.debug_list();
+        for i in 0..Slice::len(self) {
             self.get_with(i, &mut |x| {
                 list.entry(x);
             });

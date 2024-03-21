@@ -1,6 +1,7 @@
 use crate::{
-    Chain, Cycle, FromFn, Interleave, MapBorrowed, MapOwned, Reverse, Slice, SliceBorrowed,
-    SliceOf, SliceOwned, Zip,
+    ArrayWindowsBorrowed, ArrayWindowsOwned, Chain, Cycle, FromFn, Interleave, MapBorrowed,
+    MapOwned, Reverse, Slice, SliceBorrowed, SliceOf, SliceOwned, WindowsBorrowed, WindowsOwned,
+    Zip,
 };
 
 macro_rules! impl_eq {
@@ -132,6 +133,102 @@ where
             for i in 0..self.len() {
                 if other
                     .get_with(i, &mut |x| x != &self.get_owned(i).unwrap())
+                    .unwrap_or(true)
+                {
+                    return false;
+                }
+            }
+
+            true
+        }
+    }
+}
+
+impl<'a, T, U, O, S> PartialEq<O> for WindowsOwned<'a, S>
+where
+    O: SliceOwned<Output = U>,
+    SliceOf<&'a S>: PartialEq<U>,
+    S: SliceOwned<Output = T>,
+{
+    fn eq(&self, other: &O) -> bool {
+        if Slice::len(self) != other.len() {
+            false
+        } else {
+            for i in 0..Slice::len(self) {
+                if other
+                    .get_with(i, &mut |x| &self.get_owned(i).unwrap() != x)
+                    .unwrap_or(true)
+                {
+                    return false;
+                }
+            }
+
+            true
+        }
+    }
+}
+
+impl<'a, T, U, O, S> PartialEq<O> for WindowsBorrowed<'a, S>
+where
+    O: SliceBorrowed<Output = U>,
+    SliceOf<&'a S>: PartialEq<U>,
+    S: SliceBorrowed<Output = T>,
+{
+    fn eq(&self, other: &O) -> bool {
+        if Slice::len(self) != other.len() {
+            false
+        } else {
+            for i in 0..Slice::len(self) {
+                if other
+                    .get_with(i, &mut |x| &self.get_owned(i).unwrap() != x)
+                    .unwrap_or(true)
+                {
+                    return false;
+                }
+            }
+
+            true
+        }
+    }
+}
+
+impl<T, U, O, S, const N: usize> PartialEq<O> for ArrayWindowsOwned<S, N>
+where
+    O: SliceOwned<Output = U>,
+    [T; N]: PartialEq<U>,
+    S: SliceOwned<Output = T>,
+{
+    fn eq(&self, other: &O) -> bool {
+        if Slice::len(self) != other.len() {
+            false
+        } else {
+            for i in 0..Slice::len(self) {
+                if other
+                    .get_with(i, &mut |x| &self.get_owned(i).unwrap() != x)
+                    .unwrap_or(true)
+                {
+                    return false;
+                }
+            }
+
+            true
+        }
+    }
+}
+
+impl<'a, T: 'a, U, O, S, const N: usize> PartialEq<O> for ArrayWindowsBorrowed<'a, S, N>
+where
+    O: SliceBorrowed<Output = U>,
+    [&'a T; N]: PartialEq<U>,
+    S: SliceBorrowed<Output = T>,
+{
+    fn eq(&self, other: &O) -> bool {
+        if Slice::len(self) != other.len() {
+            false
+        } else {
+            for i in 0..Slice::len(self) {
+                if other
+                    .get_with(i, &mut |x| &self.get_owned(i).unwrap() != x)
                     .unwrap_or(true)
                 {
                     return false;

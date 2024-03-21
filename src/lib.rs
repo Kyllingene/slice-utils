@@ -208,7 +208,7 @@ pub trait SliceOwned: Slice {
         ArrayChunksOwned::new(self)
     }
 
-    /// Return an iterator over arrays covering overlapping portions of the
+    /// Return a slice/iterator over arrays covering overlapping portions of the
     /// slice.
     ///
     /// Analagous to [`slice::array_windows`].
@@ -222,12 +222,13 @@ pub trait SliceOwned: Slice {
     /// ```rust
     /// # use slice_utils::{SliceOwned};
     /// let slice = [1, 2, 3, 4, 5];
-    /// let mut iter = slice.array_windows::<3>();
+    /// let mut windows = slice.array_windows::<3>();
     ///
-    /// assert_eq!(iter.next(), Some([1, 2, 3]));
-    /// assert_eq!(iter.next(), Some([2, 3, 4]));
-    /// assert_eq!(iter.next(), Some([3, 4, 5]));
-    /// assert!(iter.next().is_none());
+    /// assert_eq!(windows.next(), Some([1, 2, 3]));
+    /// assert_eq!(windows.next(), Some([2, 3, 4]));
+    /// assert_eq!(windows.next(), Some([3, 4, 5]));
+    /// assert!(windows.next().is_none());
+    /// assert_eq!(windows.get_owned(1), Some([2, 3, 4]));
     /// ```
     fn array_windows<const N: usize>(self) -> ArrayWindowsOwned<Self, N>
     where
@@ -318,8 +319,8 @@ pub trait SliceOwned: Slice {
         }
     }
 
-    /// Return an iterator over slices covering overlapping portions of the
-    /// slice. The last window may be smaller than the rest.
+    /// Return a slice/iterator over slices covering overlapping portions of the
+    /// slice.
     ///
     /// Analagous to [`slice::windows`].
     ///
@@ -330,14 +331,15 @@ pub trait SliceOwned: Slice {
     /// # Examples
     ///
     /// ```rust
-    /// # use slice_utils::{SliceOwned};
+    /// # use slice_utils::SliceOwned;
     /// let slice = [1, 2, 3, 4, 5];
-    /// let mut iter = slice.windows(3);
+    /// let mut windows = slice.windows(3);
     ///
-    /// assert_eq!(iter.next().unwrap(), [1, 2, 3]);
-    /// assert_eq!(iter.next().unwrap(), [2, 3, 4]);
-    /// assert_eq!(iter.next().unwrap(), [3, 4, 5]);
-    /// assert!(iter.next().is_none());
+    /// assert_eq!(windows.next().unwrap(), [1, 2, 3]);
+    /// assert_eq!(windows.next().unwrap(), [2, 3, 4]);
+    /// assert_eq!(windows.next().unwrap(), [3, 4, 5]);
+    /// assert!(windows.next().is_none());
+    /// assert_eq!(windows.get_owned(1).unwrap(), [2, 3, 4]);
     /// ```
     fn windows(&self, size: usize) -> WindowsOwned<Self> {
         WindowsOwned::new(self, size)
@@ -416,7 +418,7 @@ pub trait SliceBorrowed: Slice {
         ArrayChunksBorrowed::new(self)
     }
 
-    /// Return an iterator over arrays covering overlapping portions of the
+    /// Return a slice/iterator over arrays covering overlapping portions of the
     /// slice.
     ///
     /// Analagous to [`slice::array_windows`].
@@ -430,12 +432,16 @@ pub trait SliceBorrowed: Slice {
     /// ```rust
     /// # use slice_utils::SliceBorrowed;
     /// let slice = [1, 2, 3, 4, 5];
-    /// let mut iter = slice.array_windows::<3>();
+    /// let mut windows = slice.array_windows::<3>();
     ///
-    /// assert_eq!(iter.next(), Some([&1, &2, &3]));
-    /// assert_eq!(iter.next(), Some([&2, &3, &4]));
-    /// assert_eq!(iter.next(), Some([&3, &4, &5]));
-    /// assert!(iter.next().is_none());
+    /// assert_eq!(windows.next(), Some([&1, &2, &3]));
+    /// assert_eq!(windows.next(), Some([&2, &3, &4]));
+    /// assert_eq!(windows.next(), Some([&3, &4, &5]));
+    /// assert!(windows.next().is_none());
+    /// # {
+    /// # use slice_utils::SliceOwned;
+    /// assert_eq!(windows.get_owned(1), Some([&2, &3, &4]));
+    /// # }
     /// ```
     fn array_windows<const N: usize>(&self) -> ArrayWindowsBorrowed<Self, N> {
         ArrayWindowsBorrowed::new(self)
@@ -525,8 +531,8 @@ pub trait SliceBorrowed: Slice {
         IterBorrowed::new(self)
     }
 
-    /// Return an iterator over slices covering overlapping portions of the
-    /// slice. The last window may be smaller than the rest.
+    /// Return a slice/iterator over slices covering overlapping portions of the
+    /// slice.
     ///
     /// Analagous to [`slice::windows`].
     ///
@@ -537,14 +543,18 @@ pub trait SliceBorrowed: Slice {
     /// # Examples
     ///
     /// ```rust
-    /// # use slice_utils::{SliceBorrowed};
+    /// # use slice_utils::SliceBorrowed;
     /// let slice = [1, 2, 3, 4, 5];
-    /// let mut iter = slice.windows(3);
+    /// let mut windows = slice.windows(3);
     ///
-    /// assert_eq!(iter.next().unwrap(), [1, 2, 3]);
-    /// assert_eq!(iter.next().unwrap(), [2, 3, 4]);
-    /// assert_eq!(iter.next().unwrap(), [3, 4, 5]);
-    /// assert!(iter.next().is_none());
+    /// assert_eq!(windows.next().unwrap(), [1, 2, 3]);
+    /// assert_eq!(windows.next().unwrap(), [2, 3, 4]);
+    /// assert_eq!(windows.next().unwrap(), [3, 4, 5]);
+    /// assert!(windows.next().is_none());
+    /// # {
+    /// # use slice_utils::SliceOwned;
+    /// assert_eq!(windows.get_owned(1).unwrap(), [2, 3, 4]);
+    /// # }
     /// ```
     fn windows(&self, size: usize) -> WindowsBorrowed<Self> {
         WindowsBorrowed::new(self, size)

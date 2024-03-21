@@ -8,9 +8,9 @@ macro_rules! either {
 macro_rules! def_window {
     ( $owned:ident, [$($lt:lifetime)?], $sized:ty, $item:ty, $fn:ident ) => {
         paste::paste! {
-            /// An iterator over overlapping windows of a slice; see
+            /// A slice/iterator over overlapping windows of a slice; see
             #[doc = concat!("[`Slice", stringify!($owned), "::windows`].")]
-            #[derive(Debug, Clone, Copy)]
+            #[derive(Clone, Copy)]
             pub struct [<Windows $owned>]<'a, S: ?Sized> {
                 /// The slice underlying the iterator.
                 pub data: &'a S,
@@ -22,7 +22,7 @@ macro_rules! def_window {
             where
                 S: [<Slice $owned>] + ?Sized,
             {
-                /// Create a new iterator; see
+                /// See
                 #[doc = concat!("[`Slice", stringify!($owned), "::windows`].")]
                 pub fn new(data: &'a S, size: usize) -> Self {
                     if size == 0 {
@@ -33,6 +33,38 @@ macro_rules! def_window {
                         data,
                         size,
                         i: 0,
+                    }
+                }
+            }
+
+            impl<'a, S> Slice for [<Windows $owned>]<'a, S>
+            where
+                S: [<Slice $owned>] + ?Sized,
+            {
+                type Output = SliceOf<&'a S>;
+
+                fn len(&self) -> usize {
+                    self.data.len() - self.size + 1
+                }
+
+                fn get_with<W: FnMut(&Self::Output) -> R, R>(
+                    &self,
+                    index: usize,
+                    f: &mut W
+                ) -> Option<R> {
+                    Some(f(&self.get_owned(index)?))
+                }
+            }
+
+            impl<'a, S> SliceOwned for [<Windows $owned>]<'a, S>
+            where
+                S: [<Slice $owned>] + ?Sized,
+            {
+                fn get_owned(&self, index: usize) -> Option<Self::Output> {
+                    if index > Slice::len(self) {
+                        None
+                    } else {
+                        self.data.slice(index..index+self.size)
                     }
                 }
             }
@@ -49,13 +81,12 @@ macro_rules! def_window {
                     } else {
                         let start = self.i;
                         self.i += 1;
-
-                        self.data.slice(start..start + self.size)
+                        self.get_owned(start)
                     }
                 }
 
                 fn size_hint(&self) -> (usize, Option<usize>) {
-                    let len = self.data.len() - self.size + 1;
+                    let len = Slice::len(self);
                     (len, Some(len))
                 }
             }
@@ -66,11 +97,11 @@ macro_rules! def_window {
                 S: [<Slice $owned>] + ?Sized {}
 
             type [<ArrayWindow $owned>]<$($lt,)? S> = either!([$(&$lt S)?][S]);
-            /// An iterator over overlapping windows of a slice; see
+            /// A slice/iterator over overlapping windows of a slice; see
             #[doc = concat!("[`Slice", stringify!($owned), "::array_windows`].")]
-            #[derive(Debug, Clone, Copy)]
+            #[derive(Clone, Copy)]
             pub struct [<ArrayWindows $owned>]<$($lt,)? S: $sized, const N: usize> {
-                /// The slice underlying the iterator.
+                /// The inner slice.
                 pub data: [<ArrayWindow $owned>]<$($lt,)? S>,
                 i: usize,
             }
@@ -79,7 +110,7 @@ macro_rules! def_window {
             where
                 S: [<Slice $owned>] + $sized,
             {
-                /// Create a new iterator; see
+                /// See
                 #[doc = concat!("[`Slice", stringify!($owned), "::array_windows`].")]
                 pub fn new(data: either!([$(&$lt S)?][S])) -> Self {
                     // TODO: make this a comptime assertion
@@ -90,6 +121,38 @@ macro_rules! def_window {
                     Self {
                         data,
                         i: 0,
+                    }
+                }
+            }
+
+            impl<$($lt,)? S, const N: usize> Slice for [<ArrayWindows $owned>]<$($lt,)? S, N>
+            where
+                S: [<Slice $owned>] + $sized,
+            {
+                type Output = [$item; N];
+
+                fn len(&self) -> usize {
+                    self.data.len() - N + 1
+                }
+
+                fn get_with<W: FnMut(&Self::Output) -> R, R>(
+                    &self,
+                    index: usize,
+                    f: &mut W
+                ) -> Option<R> {
+                    Some(f(&self.get_owned(index)?))
+                }
+            }
+
+            impl<$($lt,)? S, const N: usize> SliceOwned for [<ArrayWindows $owned>]<$($lt,)? S, N>
+            where
+                S: [<Slice $owned>] + $sized,
+            {
+                fn get_owned(&self, index: usize) -> Option<Self::Output> {
+                    if index > Slice::len(self) {
+                        None
+                    } else {
+                        Some(core::array::from_fn(|i| self.data.$fn(index + i).unwrap()))
                     }
                 }
             }
@@ -106,8 +169,7 @@ macro_rules! def_window {
                     } else {
                         let start = self.i;
                         self.i += 1;
-
-                        Some(core::array::from_fn(|i| self.data.$fn(start + i).unwrap()))
+                        self.get_owned(start)
                     }
                 }
 
