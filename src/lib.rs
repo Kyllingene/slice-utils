@@ -299,6 +299,25 @@ pub trait SliceOwned: Slice {
         IterOwned::new(self)
     }
 
+    /// Try to collect the slice into an array, failing if the lengths don't
+    /// match up.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::SliceOwned;
+    /// let slice = [1, 2, 3].map(|i| i * i);
+    /// let arr: [i32; 3] = slice.try_array().unwrap();
+    /// assert_eq!(arr, [1, 4, 9]);
+    /// ```
+    fn try_array<const N: usize>(&self) -> Option<[Self::Output; N]> {
+        if self.len() != N {
+            None
+        } else {
+            Some(core::array::from_fn(|i| self.get_owned(i).unwrap()))
+        }
+    }
+
     /// Return an iterator over slices covering overlapping portions of the
     /// slice. The last window may be smaller than the rest.
     ///
