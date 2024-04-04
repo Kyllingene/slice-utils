@@ -1,3 +1,5 @@
+use core::ops::{Range, RangeFrom, RangeInclusive};
+
 use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
 
 impl<T, const N: usize> Slice for [T; N] {
@@ -65,6 +67,7 @@ impl<T> SliceMut for [T] {
         (index < self.len()).then(|| &mut self[index])
     }
 }
+
 
 impl<'a, S> Slice for &'a S
 where
@@ -140,3 +143,40 @@ where
         (**self).get_mut(index)
     }
 }
+
+macro_rules! impl_for_range {
+    ($($range:ident),*) => {$(
+        impl<T> Slice for $range<T>
+        where
+            T: Clone,
+            $range<T>: Iterator<Item = T>,
+        {
+            type Output = T;
+
+            fn len(&self) -> usize {
+                self.size_hint().0
+            }
+
+            fn get_with<W: FnMut(&Self::Output) -> R, R>(&self, index: usize, f: &mut W)
+                -> Option<R>
+            {
+                self.clone().nth(index)
+                    .as_ref()
+                    .map(f)
+            }
+        }
+
+        impl<T> SliceOwned for $range<T>
+        where
+            T: Clone,
+            $range<T>: Iterator<Item = T>,
+        {
+            fn get_owned(&self, index: usize) -> Option<T> {
+                self.clone().nth(index)
+            }
+        }
+    )*};
+}
+
+// TODO: figure out a way to include all the ranges
+impl_for_range!(Range, RangeFrom, RangeInclusive);

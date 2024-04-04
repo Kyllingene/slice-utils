@@ -51,3 +51,12 @@ fn slices() {
 
     assert_eq!((&[1, 2, 3]).rev().get(0), Some(&3));
 }
+
+#[test]
+fn ranges() {
+    let range = 1..5;
+    assert_eq!(range.get_owned(0), Some(1));
+    assert_eq!(range.get_owned(3), Some(4));
+    assert_eq!(range.get_owned(4), None);
+    assert_eq!(Slice::rev(range).get_owned(0), Some(4));
+}
