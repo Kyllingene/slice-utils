@@ -1,6 +1,6 @@
 use core::ops::{Range, RangeFrom, RangeInclusive};
 
-use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
+use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned, Unique};
 
 impl<T, const N: usize> Slice for [T; N] {
     type Output = T;
@@ -35,6 +35,9 @@ impl<T, const N: usize> SliceMut for [T; N] {
     }
 }
 
+// SAFETY: arrays are contiguous in memory
+unsafe impl<T, const N: usize> Unique for [T; N] {}
+
 impl<T> Slice for [T] {
     type Output = T;
 
@@ -68,6 +71,8 @@ impl<T> SliceMut for [T] {
     }
 }
 
+// SAFETY: slices are contiguous in memory
+unsafe impl<T> Unique for [T] {}
 
 impl<'a, S> Slice for &'a S
 where
@@ -143,6 +148,9 @@ where
         (**self).get_mut(index)
     }
 }
+
+// SAFETY: the underlying slice is `Unique`
+unsafe impl<'a, S> Unique for &'a mut S where S: Unique + ?Sized {}
 
 macro_rules! impl_for_range {
     ($($range:ident),*) => {$(

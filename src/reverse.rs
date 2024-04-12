@@ -1,4 +1,4 @@
-use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
+use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned, Unique};
 
 /// A reversed slice; see [`Slice::rev`].
 pub struct Reverse<S>(pub S);
@@ -44,3 +44,9 @@ where
         self.0.get_mut(self.len() - 1 - index)
     }
 }
+
+// SAFETY: the underlying slice is `Unique`, and reversing cannot alias
+unsafe impl<S> Unique for Reverse<S>
+where
+    S: Unique,
+{}

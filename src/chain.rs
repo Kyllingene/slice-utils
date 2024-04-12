@@ -1,4 +1,4 @@
-use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned};
+use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned, Unique};
 
 /// Two chained slices; see [`Slice::chain`].
 pub struct Chain<S1, S2>(pub S1, pub S2);
@@ -59,3 +59,11 @@ where
         }
     }
 }
+
+// SAFETY: both slices are `Unique`, and aliasing rules prevent creating two
+// aliasing slices
+unsafe impl<S1, S2> Unique for Chain<S1, S2>
+where
+    S1: Unique,
+    S2: Unique,
+{}

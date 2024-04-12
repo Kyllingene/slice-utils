@@ -2,17 +2,17 @@ use core::fmt;
 
 use crate::{
     ArrayWindowsBorrowed, ArrayWindowsOwned, Chain, Cycle, FromFn, Interleave, MapBorrowed,
-    MapOwned, Reverse, Slice, SliceBorrowed, SliceOf, SliceOwned, WindowsBorrowed, WindowsOwned,
-    Zip,
+    MapOwned, Reverse, Slice, SliceBorrowed, SliceOf, SliceOwned, SplitMut, WindowsBorrowed,
+    WindowsOwned, Zip,
 };
 
 macro_rules! impl_debug {
     ($(
-        $typ:ident [$($generics:ident),*]
+        $typ:ident [$($lt:lifetime),* $($generics:ident),*]
     ;)*) => {$(
         impl<
-            T, S $(, $generics)*,
-        > fmt::Debug for $typ<S $(, $generics)*>
+            $($lt,)* T, S $(, $generics)*,
+        > fmt::Debug for $typ<$($lt,)* S $(, $generics)*>
         where
             T: fmt::Debug,
             S: Slice<Output = T>,
@@ -34,6 +34,7 @@ impl_debug! {
     Interleave[S2];
     Reverse[];
     SliceOf[];
+    SplitMut['a];
 }
 
 // Separate impl to avoid infinite debug printing

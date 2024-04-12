@@ -1,4 +1,4 @@
-use crate::{Slice, SliceOwned};
+use crate::{Slice, SliceOwned, Unique};
 
 /// Two slices zipped together; see [`SliceOwned::zip`].
 #[derive(Clone, Copy, Hash)]
@@ -30,3 +30,10 @@ where
         Some((self.0.get_owned(index)?, self.1.get_owned(index)?))
     }
 }
+
+// SAFETY: both underlying slices are `Unique`
+unsafe impl<S1, S2> Unique for Zip<S1, S2>
+where
+    S1: Unique,
+    S2: Unique,
+{}

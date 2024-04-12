@@ -31,7 +31,7 @@ pub use interleave::Interleave;
 pub use iter::{IterBorrowed, IterOwned};
 pub use map::{MapBorrowed, MapOwned};
 pub use reverse::Reverse;
-pub use slicing::SliceOf;
+pub use slicing::{SliceOf, SplitMut};
 pub use windows::{ArrayWindowsBorrowed, ArrayWindowsOwned, WindowsBorrowed, WindowsOwned};
 pub use zip::Zip;
 
@@ -565,7 +565,42 @@ pub trait SliceBorrowed: Slice {
 pub trait SliceMut: Slice {
     /// Index the slice, returning a mutably borrowed value.
     fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output>;
+
+    /// Returns `(&mut self[..at], &mut self[at..])`.
+    /// Returns `None` if `at` is out-of-bounds.
+    ///
+    /// Analagous to [`slice::split_mut`].
+    ///
+    /// To avoid aliasing, requires <code>Self: [Unique]</code>.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use slice_utils::SliceMut;
+    /// let mut slice = [1, 2, 3, 4, 5];
+    /// let (mut left, mut right) = SliceMut::split_mut(&mut slice, 2).unwrap();
+    ///
+    /// assert_eq!(left, [1, 2, 3]);
+    /// assert_eq!(right, [4, 5]);
+    ///
+    /// left[0] = 0;
+    /// right[0] = 0;
+    /// assert_eq!(slice, [0, 2, 3, 0, 5]);
+    /// ```
+    fn split_mut(&mut self, at: usize) -> Option<(SplitMut<Self>, SplitMut<Self>)>
+    where
+        Self: Unique,
+    {
+        SplitMut::new(self, at)
+    }
 }
+
+/// A marker trait confirming that two indices of a [`SliceMut`] will never alias.
+///
+/// # Safety
+///
+/// Two calls to `get_mut` with different indices must never return aliasing references.
+pub unsafe trait Unique {}
 
 /// A slice made by calling a closure on the index.
 ///

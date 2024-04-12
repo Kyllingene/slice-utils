@@ -1,16 +1,16 @@
 use crate::{
     ArrayWindowsBorrowed, ArrayWindowsOwned, Chain, Cycle, FromFn, Interleave, MapBorrowed,
-    MapOwned, Reverse, Slice, SliceBorrowed, SliceOf, SliceOwned, WindowsBorrowed, WindowsOwned,
-    Zip,
+    MapOwned, Reverse, Slice, SliceBorrowed, SliceOf, SliceOwned, SplitMut, WindowsBorrowed,
+    WindowsOwned, Zip,
 };
 
 macro_rules! impl_eq {
     ($(
-        $typ:ident [$($generics:ident),*]
+        $typ:ident [$($lt:lifetime),* $($generics:ident),*]
     ;)*) => {$(
         impl<
-            T, S, O, V $(, $generics)*,
-        > PartialEq<O> for $typ<S $(, $generics)*>
+            $($lt,)* T, S, O, V $(, $generics)*,
+        > PartialEq<O> for $typ<$($lt,)* S $(, $generics)*>
         where
             V: PartialEq<T>,
             S: SliceOwned<Output = T>,
@@ -43,6 +43,7 @@ impl_eq! {
     Interleave[S2];
     Reverse[];
     SliceOf[];
+    SplitMut['a];
 }
 
 impl<T, S, O, F, U, V> PartialEq<O> for MapOwned<S, F>

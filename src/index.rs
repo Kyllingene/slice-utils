@@ -1,14 +1,16 @@
 use core::ops::{Index, IndexMut};
 
-use crate::{Chain, Cycle, Interleave, Reverse, Slice, SliceBorrowed, SliceMut, SliceOf};
+use crate::{
+    Chain, Cycle, Interleave, Reverse, Slice, SliceBorrowed, SliceMut, SliceOf, SplitMut, Unique,
+};
 
 macro_rules! impl_index {
     ($(
-        $typ:ident [$($generics:ident),*]
+        $typ:ident [$($lt:lifetime),* $($generics:ident),*] $(= $unique:ident)?
     ;)*) => {$(
         impl<
-            T, S $(, $generics)*,
-        > Index<usize> for $typ<S $(, $generics)*>
+            $($lt,)* T, S $(, $generics)*,
+        > Index<usize> for $typ<$($lt,)* S $(, $generics)*>
         where
             S: SliceBorrowed<Output = T>,
             $( $generics: SliceBorrowed<Output = T>,)*
@@ -23,10 +25,10 @@ macro_rules! impl_index {
         }
 
         impl<
-            T, S $(, $generics)*,
-        > IndexMut<usize> for $typ<S $(, $generics)*>
+            $($lt,)* T, S $(, $generics)*,
+        > IndexMut<usize> for $typ<$($lt,)* S $(, $generics)*>
         where
-            S: SliceBorrowed<Output = T> + SliceMut,
+            S: SliceBorrowed<Output = T> + SliceMut $(+ $unique)?,
             $( $generics: SliceBorrowed<Output = T> + SliceMut,)*
         {
             fn index_mut(&mut self, index: usize) -> &mut Self::Output {
@@ -45,4 +47,5 @@ impl_index! {
     Interleave[S2];
     Reverse[];
     SliceOf[];
+    SplitMut['a] = Unique;
 }
