@@ -134,7 +134,7 @@ where
 // SAFETY: the underlying slice is `Unique` and owned
 unsafe impl<A> Unique for SliceOf<A> where A: Unique {}
 
-/// A mutable sub-slice of a [`Slice`]; see [`SliceMut::slice_mut`].
+/// A mutable sub-slice of a [`Slice`]; see [`SliceMut::split_mut`].
 #[derive(Clone, Copy, Hash)]
 pub struct SplitMut<'a, A: ?Sized> {
     data: *mut A,
