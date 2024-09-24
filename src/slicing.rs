@@ -132,10 +132,7 @@ where
 }
 
 // SAFETY: the underlying slice is `Unique` and owned
-unsafe impl<A> Unique for SliceOf<A>
-where
-    A: Unique,
-{}
+unsafe impl<A> Unique for SliceOf<A> where A: Unique {}
 
 /// A mutable sub-slice of a [`Slice`]; see [`SliceMut::slice_mut`].
 #[derive(Clone, Copy, Hash)]

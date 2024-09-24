@@ -46,7 +46,4 @@ where
 }
 
 // SAFETY: the underlying slice is `Unique`, and reversing cannot alias
-unsafe impl<S> Unique for Reverse<S>
-where
-    S: Unique,
-{}
+unsafe impl<S> Unique for Reverse<S> where S: Unique {}

@@ -1,12 +1,14 @@
 use crate::{Slice, SliceBorrowed, SliceOwned};
 
 #[test]
-#[should_panic = "[1, 4, 9] [1, 2, 3, ...]"]
 fn debug_impl() {
-    panic!(
-        "{:?} {:?}",
-        SliceOwned::map([1, 2, 3], |x| x * x),
-        [1, 2, 3].cycle()
+    assert_eq!(
+        format!(
+            "{:?} {:?}",
+            SliceOwned::map([1, 2, 3], |x| x * x),
+            [1, 2, 3].cycle()
+        ),
+        "[1, 4, 9] [1, 2, 3, ...]"
     );
 }
 
@@ -28,8 +30,6 @@ fn index() {
     assert_eq!(slice[7], 4);
 
     let slice = [1, 2, 3, 4].slice(..).unwrap();
-
-    #[allow(unconditional_panic)]
     let _ = slice[4];
 }
 
@@ -45,8 +45,8 @@ fn slices() {
 
     #[allow(clippy::needless_borrows_for_generic_args)]
     {
-        foo(&[1, 2, 3]);
-        bar(&[1, 2, 3]);
+        foo([1, 2, 3]);
+        bar([1, 2, 3]);
     }
 
     assert_eq!((&[1, 2, 3]).rev().get(0), Some(&3));

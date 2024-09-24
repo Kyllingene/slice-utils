@@ -71,4 +71,5 @@ unsafe impl<S1, S2> Unique for Interleave<S1, S2>
 where
     S1: Unique,
     S2: Unique,
-{}
+{
+}

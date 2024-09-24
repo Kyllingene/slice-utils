@@ -1,6 +1,8 @@
 use core::ops::{Range, RangeFrom, RangeInclusive};
 
-use crate::{Slice, SliceBorrowed, SliceMut, SliceOwned, Unique};
+use crate::{
+    ContiguousBorrowed, ContiguousMut, Slice, SliceBorrowed, SliceMut, SliceOwned, Unique,
+};
 
 impl<T, const N: usize> Slice for [T; N] {
     type Output = T;
@@ -32,6 +34,18 @@ impl<T, const N: usize> SliceBorrowed for [T; N] {
 impl<T, const N: usize> SliceMut for [T; N] {
     fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output> {
         (index < N).then(|| &mut self[index])
+    }
+}
+
+impl<T, const N: usize> ContiguousBorrowed for [T; N] {
+    fn contiguous(&self) -> &[T] {
+        self
+    }
+}
+
+impl<T, const N: usize> ContiguousMut for [T; N] {
+    fn contiguous_mut(&mut self) -> &mut [T] {
+        self
     }
 }
 
@@ -71,6 +85,18 @@ impl<T> SliceMut for [T] {
     }
 }
 
+impl<T> ContiguousBorrowed for [T] {
+    fn contiguous(&self) -> &[T] {
+        self
+    }
+}
+
+impl<T> ContiguousMut for [T] {
+    fn contiguous_mut(&mut self) -> &mut [T] {
+        self
+    }
+}
+
 // SAFETY: slices are contiguous in memory
 unsafe impl<T> Unique for [T] {}
 
@@ -106,6 +132,18 @@ where
         (**self).get(index)
     }
 }
+
+impl<S> ContiguousBorrowed for &'_ S
+where
+    S: ContiguousBorrowed + ?Sized,
+{
+    fn contiguous(&self) -> &[S::Output] {
+        (**self).contiguous()
+    }
+}
+
+// SAFETY: the underlying slice is `Unique`
+unsafe impl<'a, S> Unique for &'a S where S: Unique + ?Sized {}
 
 impl<'a, S> Slice for &'a mut S
 where
@@ -149,8 +187,80 @@ where
     }
 }
 
+impl<S> ContiguousBorrowed for &'_ mut S
+where
+    S: ContiguousBorrowed + ?Sized,
+{
+    fn contiguous(&self) -> &[S::Output] {
+        (**self).contiguous()
+    }
+}
+
+impl<S> ContiguousMut for &'_ mut S
+where
+    S: ContiguousMut + ?Sized,
+{
+    fn contiguous_mut(&mut self) -> &mut [S::Output] {
+        (**self).contiguous_mut()
+    }
+}
+
 // SAFETY: the underlying slice is `Unique`
 unsafe impl<'a, S> Unique for &'a mut S where S: Unique + ?Sized {}
+
+#[cfg(feature = "std")]
+mod with_std {
+    use crate::{
+        ContiguousBorrowed, ContiguousMut, Slice, SliceBorrowed, SliceMut, SliceOwned, Unique,
+    };
+    impl<T> Slice for Vec<T> {
+        type Output = T;
+
+        fn len(&self) -> usize {
+            (*self).len()
+        }
+
+        fn get_with<W: FnMut(&Self::Output) -> R, R>(&self, index: usize, f: &mut W) -> Option<R> {
+            Some(f(self.get(index)?))
+        }
+    }
+
+    impl<T> SliceOwned for Vec<T>
+    where
+        T: Copy,
+    {
+        fn get_owned(&self, index: usize) -> Option<Self::Output> {
+            (index < self.len()).then(|| self[index])
+        }
+    }
+
+    impl<T> SliceBorrowed for Vec<T> {
+        fn get(&self, index: usize) -> Option<&Self::Output> {
+            (index < self.len()).then(|| &self[index])
+        }
+    }
+
+    impl<T> SliceMut for Vec<T> {
+        fn get_mut(&mut self, index: usize) -> Option<&mut Self::Output> {
+            (index < self.len()).then(|| &mut self[index])
+        }
+    }
+
+    impl<T> ContiguousBorrowed for Vec<T> {
+        fn contiguous(&self) -> &[T] {
+            &*self
+        }
+    }
+
+    impl<T> ContiguousMut for Vec<T> {
+        fn contiguous_mut(&mut self) -> &mut [T] {
+            &mut *self
+        }
+    }
+
+    // SAFETY: vecs are contiguous in memory
+    unsafe impl<T> Unique for Vec<T> {}
+}
 
 macro_rules! impl_for_range {
     ($($range:ident),*) => {$(

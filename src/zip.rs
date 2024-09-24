@@ -36,4 +36,5 @@ unsafe impl<S1, S2> Unique for Zip<S1, S2>
 where
     S1: Unique,
     S2: Unique,
-{}
+{
+}
